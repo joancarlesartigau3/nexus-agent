@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NEXUS">
+<meta name="theme-color" content="#000000">
+<title>NEXUS Agent</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --cyan: #00f5ff;
+    --cyan-dim: #00b8c4;
+    --green: #00ff88;
+    --red: #ff3366;
+    --gold: #ffd700;
+    --bg: #020609;
+    --surface: #050e14;
+    --border: rgba(0,245,255,0.15);
+    --text: #c8eef5;
+    --safe-top: env(safe-area-inset-top, 44px);
+    --safe-bottom: env(safe-area-inset-bottom, 34px);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ── BACKGROUND ── */
+  .bg-grid {
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: gridShift 20s linear infinite;
+  }
+  @keyframes gridShift { to { background-position: 40px 40px; } }
+
+  .bg-glow {
+    position: fixed; inset: 0; z-index: 0;
+    background: radial-gradient(ellipse 60% 50% at 50% 60%, rgba(0,245,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ── LAYOUT ── */
+  #app {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column; align-items: center;
+    width: 100%; height: 100%;
+    padding-top: calc(var(--safe-top) + 12px);
+    padding-bottom: calc(var(--safe-bottom) + 12px);
+    padding-left: 16px; padding-right: 16px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px; font-weight: 900;
+    letter-spacing: 6px;
+    color: var(--cyan);
+    text-shadow: 0 0 20px rgba(0,245,255,0.8), 0 0 40px rgba(0,245,255,0.4);
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── ORB ── */
+  .orb-container {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0;
+  }
+
+  .orb-wrapper {
+    position: relative;
+    width: 200px; height: 200px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+
+  /* Rings */
+  .ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(0,245,255,0.2);
+  }
+  .ring-1 { width: 200px; height: 200px; animation: ringRotate 8s linear infinite; border-color: rgba(0,245,255,0.15); }
+  .ring-2 { width: 170px; height: 170px; animation: ringRotate 5s linear infinite reverse; border-color: rgba(0,245,255,0.1); }
+  .ring-3 { width: 230px; height: 230px; animation: ringRotate 12s linear infinite; border-style: dashed; border-color: rgba(0,245,255,0.07); }
+
+  @keyframes ringRotate { to { transform: rotate(360deg); } }
+
+  /* Main orb */
+  .orb {
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    position: relative;
+    background: radial-gradient(circle at 35% 35%,
+      rgba(0,245,255,0.3) 0%,
+      rgba(0,180,200,0.15) 40%,
+      rgba(0,50,80,0.8) 100%
+    );
+    border: 1.5px solid rgba(0,245,255,0.5);
+    box-shadow:
+      0 0 30px rgba(0,245,255,0.3),
+      0 0 60px rgba(0,245,255,0.15),
+      inset 0 0 40px rgba(0,245,255,0.1);
+    transition: all 0.3s ease;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 4px;
+  }
+
+  .orb-icon {
+    font-size: 36px;
+    filter: drop-shadow(0 0 8px rgba(0,245,255,0.8));
+    transition: all 0.3s;
+  }
+  .orb-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 8px; letter-spacing: 3px;
+    color: rgba(0,245,255,0.7);
+  }
+
+  /* States */
+  .orb.listening {
+    background: radial-gradient(circle at 35% 35%,
+      rgba(0,245,255,0.5) 0%,
+      rgba(0,200,220,0.3) 40%,
+      rgba(0,80,100,0.9) 100%
+    );
+    box-shadow:
+      0 0 50px rgba(0,245,255,0.6),
+      0 0 100px rgba(0,245,255,0.3),
+      inset 0 0 60px rgba(0,245,255,0.2);
+    animation: orbPulse 0.8s ease-in-out infinite;
+  }
+  .orb.thinking {
+    background: radial-gradient(circle at 35% 35%,
+      rgba(255,215,0,0.4) 0%,
+      rgba(200,160,0,0.2) 40%,
+      rgba(80,50,0,0.9) 100%
+    );
+    border-color: rgba(255,215,0,0.5);
+    box-shadow: 0 0 50px rgba(255,215,0,0.4), 0 0 100px rgba(255,215,0,0.2);
+  }
+  .orb.speaking {
+    background: radial-gradient(circle at 35% 35%,
+      rgba(0,255,136,0.4) 0%,
+      rgba(0,200,100,0.2) 40%,
+      rgba(0,60,30,0.9) 100%
+    );
+    border-color: rgba(0,255,136,0.5);
+    box-shadow: 0 0 50px rgba(0,255,136,0.4), 0 0 100px rgba(0,255,136,0.2);
+    animation: orbPulse 0.4s ease-in-out infinite;
+  }
+  .orb.error {
+    background: radial-gradient(circle at 35% 35%,
+      rgba(255,51,102,0.4) 0%,
+      rgba(200,0,50,0.2) 40%,
+      rgba(80,0,20,0.9) 100%
+    );
+    border-color: rgba(255,51,102,0.5);
+    box-shadow: 0 0 50px rgba(255,51,102,0.4);
+  }
+
+  @keyframes orbPulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+  }
+
+  /* Sound bars */
+  .sound-bars {
+    display: flex; gap: 3px; align-items: flex-end; height: 20px;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .sound-bars.active { opacity: 1; }
+  .bar {
+    width: 3px; border-radius: 2px;
+    background: var(--cyan);
+    box-shadow: 0 0 4px var(--cyan);
+  }
+  .bar:nth-child(1) { animation: barAnim 0.8s ease-in-out infinite 0.0s; }
+  .bar:nth-child(2) { animation: barAnim 0.8s ease-in-out infinite 0.1s; }
+  .bar:nth-child(3) { animation: barAnim 0.8s ease-in-out infinite 0.2s; }
+  .bar:nth-child(4) { animation: barAnim 0.8s ease-in-out infinite 0.3s; }
+  .bar:nth-child(5) { animation: barAnim 0.8s ease-in-out infinite 0.4s; }
+  @keyframes barAnim {
+    0%,100% { height: 4px; }
+    50% { height: 16px; }
+  }
+
+  /* ── STATUS TEXT ── */
+  .status-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px; letter-spacing: 3px;
+    color: rgba(0,245,255,0.6);
+    margin-top: 16px;
+    height: 16px;
+    text-align: center;
+    transition: all 0.3s;
+  }
+
+  /* ── TRANSCRIPT ── */
+  .transcript-area {
+    width: 100%;
+    max-height: 80px;
+    margin-top: 8px;
+    padding: 10px 14px;
+    background: rgba(0,245,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 13px;
+    color: rgba(200,238,245,0.7);
+    line-height: 1.4;
+    overflow-y: auto;
+    min-height: 44px;
+    display: flex; align-items: center;
+  }
+  .transcript-area span { font-style: italic; color: rgba(0,245,255,0.4); font-size: 12px; }
+
+  /* ── RESPONSE ── */
+  .response-area {
+    width: 100%;
+    flex: 0 0 auto;
+    max-height: 140px;
+    overflow-y: auto;
+    margin-top: 8px;
+    padding: 12px 14px;
+    background: rgba(0,245,255,0.04);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--cyan);
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+    display: none;
+  }
+  .response-area.visible { display: block; }
+  .response-area .action-tag {
+    display: inline-block;
+    background: rgba(0,245,255,0.1);
+    border: 1px solid rgba(0,245,255,0.3);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 10px;
+    color: var(--cyan);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  /* ── ACTION BUTTONS ── */
+  .action-buttons {
+    width: 100%; margin-top: 8px;
+    display: flex; gap: 8px; flex-wrap: wrap;
+    display: none;
+  }
+  .action-buttons.visible { display: flex; }
+  .action-btn {
+    flex: 1; min-width: 80px;
+    padding: 10px 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(0,245,255,0.05);
+    color: var(--cyan);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px; letter-spacing: 1px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .action-btn:active { background: rgba(0,245,255,0.15); transform: scale(0.96); }
+  .action-btn .btn-icon { font-size: 18px; }
+
+  /* ── QUICK ACTIONS ── */
+  .quick-grid {
+    width: 100%; margin-top: 8px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  }
+  .quick-btn {
+    aspect-ratio: 1;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(0,245,255,0.03);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 8px 4px;
+  }
+  .quick-btn:active { background: rgba(0,245,255,0.1); transform: scale(0.95); }
+  .quick-btn .q-icon { font-size: 22px; }
+  .quick-btn .q-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 7px; letter-spacing: 0.5px;
+    color: rgba(0,245,255,0.5);
+    text-align: center;
+  }
+
+  /* ── API KEY MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(2,6,9,0.95);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    backdrop-filter: blur(10px);
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal {
+    width: 100%; max-width: 380px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    box-shadow: 0 0 60px rgba(0,245,255,0.1);
+  }
+  .modal-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px; letter-spacing: 4px;
+    color: var(--cyan); margin-bottom: 6px;
+    text-shadow: 0 0 20px rgba(0,245,255,0.5);
+  }
+  .modal-sub {
+    font-size: 12px; color: rgba(200,238,245,0.5);
+    margin-bottom: 20px; line-height: 1.5;
+  }
+  .modal-input {
+    width: 100%; padding: 12px 14px;
+    background: rgba(0,245,255,0.05);
+    border: 1px solid rgba(0,245,255,0.2);
+    border-radius: 10px;
+    color: var(--text); font-family: 'Share Tech Mono', monospace;
+    font-size: 13px; outline: none;
+    margin-bottom: 8px;
+  }
+  .modal-input:focus { border-color: var(--cyan); box-shadow: 0 0 15px rgba(0,245,255,0.1); }
+  .modal-input::placeholder { color: rgba(0,245,255,0.25); }
+  .modal-note {
+    font-size: 10px; color: rgba(200,238,245,0.35);
+    margin-bottom: 20px; line-height: 1.5;
+  }
+  .modal-btn {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, rgba(0,245,255,0.2), rgba(0,180,200,0.1));
+    border: 1px solid rgba(0,245,255,0.4);
+    border-radius: 12px;
+    color: var(--cyan);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px; letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .modal-btn:active { transform: scale(0.98); background: rgba(0,245,255,0.3); }
+  .modal-link {
+    display: block; text-align: center; margin-top: 12px;
+    font-size: 11px; color: rgba(0,245,255,0.4);
+    text-decoration: none;
+  }
+
+  /* ── HISTORY PANEL ── */
+  .history-panel {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(2,6,9,0.97);
+    display: flex; flex-direction: column;
+    padding: 60px 20px 40px;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  }
+  .history-panel.open { transform: translateY(0); }
+  .history-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px; letter-spacing: 4px; color: var(--cyan);
+    margin-bottom: 16px;
+  }
+  .history-list {
+    flex: 1; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .history-item {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(0,245,255,0.02);
+  }
+  .history-item .h-user { font-size: 12px; color: rgba(0,245,255,0.6); margin-bottom: 4px; }
+  .history-item .h-agent { font-size: 12px; color: var(--text); line-height: 1.4; }
+  .history-close {
+    margin-top: 16px; padding: 14px;
+    border: 1px solid var(--border); border-radius: 12px;
+    background: transparent; color: var(--text);
+    font-family: 'Orbitron', sans-serif; font-size: 11px; letter-spacing: 2px;
+    cursor: pointer;
+  }
+
+  /* ── SETTINGS ── */
+  .settings-row {
+    width: 100%; display: flex; justify-content: space-between;
+    margin-top: 8px; gap: 8px;
+  }
+  .icon-btn {
+    flex: 1; padding: 8px;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: transparent; color: rgba(0,245,255,0.4);
+    font-size: 11px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    font-family: 'Orbitron', sans-serif; letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .icon-btn:active { background: rgba(0,245,255,0.08); }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,245,255,0.2); border-radius: 2px; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: calc(var(--safe-bottom) + 100px);
+    left: 50%; transform: translateX(-50%) translateY(20px);
+    background: rgba(0,245,255,0.1);
+    border: 1px solid rgba(0,245,255,0.3);
+    border-radius: 20px; padding: 8px 20px;
+    font-size: 12px; color: var(--cyan);
+    opacity: 0; transition: all 0.3s;
+    white-space: nowrap; pointer-events: none; z-index: 200;
+    font-family: 'Orbitron', sans-serif; letter-spacing: 1px;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<!-- API KEY MODAL -->
+<div class="modal-overlay" id="apiModal">
+  <div class="modal">
+    <div class="modal-title">NEXUS AGENT</div>
+    <div class="modal-sub">Conecta tu clave de Claude API para activar la inteligencia.</div>
+    <input class="modal-input" type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="modal-note">🔒 Tu clave se guarda solo en este dispositivo (localStorage). No se envía a ningún servidor externo, solo a api.anthropic.com directamente.</div>
+    <button class="modal-btn" onclick="saveApiKey()">ACTIVAR NEXUS</button>
+    <a class="modal-link" href="https://console.anthropic.com" target="_blank">→ Obtener clave gratuita en console.anthropic.com</a>
+  </div>
+</div>
+
+<!-- HISTORY PANEL -->
+<div class="history-panel" id="historyPanel">
+  <div class="history-title">HISTORIAL</div>
+  <div class="history-list" id="historyList"></div>
+  <button class="history-close" onclick="closeHistory()">✕ CERRAR</button>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">NEXUS</div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div class="status-dot" id="statusDot"></div>
+    </div>
+  </div>
+
+  <!-- ORB -->
+  <div class="orb-container">
+    <div class="orb-wrapper" onclick="toggleListen()">
+      <div class="ring ring-3"></div>
+      <div class="ring ring-1"></div>
+      <div class="ring ring-2"></div>
+      <div class="orb" id="mainOrb">
+        <div class="orb-icon" id="orbIcon">🎙️</div>
+        <div class="orb-label" id="orbLabel">TOCA PARA HABLAR</div>
+      </div>
+    </div>
+
+    <div class="sound-bars" id="soundBars">
+      <div class="bar" style="height:4px"></div>
+      <div class="bar" style="height:4px"></div>
+      <div class="bar" style="height:4px"></div>
+      <div class="bar" style="height:4px"></div>
+      <div class="bar" style="height:4px"></div>
+    </div>
+
+    <div class="status-text" id="statusText">LISTO</div>
+  </div>
+
+  <!-- Transcript -->
+  <div class="transcript-area" id="transcriptArea">
+    <span>Di algo después de tocar el orbe...</span>
+  </div>
+
+  <!-- Response -->
+  <div class="response-area" id="responseArea"></div>
+
+  <!-- Action buttons (dynamic) -->
+  <div class="action-buttons" id="actionButtons"></div>
+
+  <!-- Quick Actions -->
+  <div class="quick-grid">
+    <div class="quick-btn" onclick="quickAction('llamar')">
+      <div class="q-icon">📞</div>
+      <div class="q-label">LLAMAR</div>
+    </div>
+    <div class="quick-btn" onclick="quickAction('whatsapp')">
+      <div class="q-icon">💬</div>
+      <div class="q-label">WHATSAPP</div>
+    </div>
+    <div class="quick-btn" onclick="quickAction('maps')">
+      <div class="q-icon">🗺️</div>
+      <div class="q-label">MAPS</div>
+    </div>
+    <div class="quick-btn" onclick="quickAction('nexus')">
+      <div class="q-icon">📈</div>
+      <div class="q-label">NEXUS</div>
+    </div>
+    <div class="quick-btn" onclick="quickAction('tiempo')">
+      <div class="q-icon">🌤️</div>
+      <div class="q-label">TIEMPO</div>
+    </div>
+    <div class="quick-btn" onclick="quickAction('recordatorio')">
+      <div class="q-icon">⏰</div>
+      <div class="q-label">RECORDAR</div>
+    </div>
+    <div class="quick-btn" onclick="quickAction('email')">
+      <div class="q-icon">📧</div>
+      <div class="q-label">EMAIL</div>
+    </div>
+    <div class="quick-btn" onclick="quickAction('buscar')">
+      <div class="q-icon">🔍</div>
+      <div class="q-label">BUSCAR</div>
+    </div>
+  </div>
+
+  <!-- Bottom row -->
+  <div class="settings-row">
+    <button class="icon-btn" onclick="openHistory()">📋 HISTORIAL</button>
+    <button class="icon-btn" onclick="clearKey()">🔑 API KEY</button>
+    <button class="icon-btn" onclick="stopSpeaking()">🔇 SILENCIO</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+let apiKey = '';
+let isListening = false;
+let recognition = null;
+let synth = window.speechSynthesis;
+let conversationHistory = [];
+let isSpeaking = false;
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+window.addEventListener('load', () => {
+  apiKey = localStorage.getItem('nexus_api_key') || '';
+  if (apiKey) {
+    document.getElementById('apiModal').classList.add('hidden');
+    initRecognition();
+  }
+  // Load history
+  const saved = localStorage.getItem('nexus_history');
+  if (saved) conversationHistory = JSON.parse(saved);
+});
+
+// ══════════════════════════════════════════
+//  API KEY
+// ══════════════════════════════════════════
+function saveApiKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (!val.startsWith('sk-ant')) {
+    showToast('⚠ Clave inválida');
+    return;
+  }
+  apiKey = val;
+  localStorage.setItem('nexus_api_key', apiKey);
+  document.getElementById('apiModal').classList.add('hidden');
+  initRecognition();
+  showToast('✓ NEXUS ACTIVADO');
+}
+
+function clearKey() {
+  if (!confirm('¿Cambiar API key?')) return;
+  localStorage.removeItem('nexus_api_key');
+  apiKey = '';
+  document.getElementById('apiKeyInput').value = '';
+  document.getElementById('apiModal').classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════
+//  SPEECH RECOGNITION
+// ══════════════════════════════════════════
+function initRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast('⚠ Usa Safari en iPhone');
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.lang = 'es-ES';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    setOrbState('listening');
+    setStatus('ESCUCHANDO...');
+    document.getElementById('soundBars').classList.add('active');
+  };
+
+  recognition.onresult = (e) => {
+    let interim = '';
+    let final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += t;
+      else interim += t;
+    }
+    const display = final || interim;
+    document.getElementById('transcriptArea').textContent = display;
+    if (final) processQuery(final);
+  };
+
+  recognition.onerror = (e) => {
+    setOrbState('error');
+    setStatus('ERROR: ' + e.error.toUpperCase());
+    isListening = false;
+    document.getElementById('soundBars').classList.remove('active');
+    setTimeout(() => { setOrbState('idle'); setStatus('LISTO'); }, 2000);
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    document.getElementById('soundBars').classList.remove('active');
+    if (document.getElementById('mainOrb').className.includes('listening')) {
+      setOrbState('idle');
+      setStatus('LISTO');
+    }
+  };
+}
+
+function toggleListen() {
+  if (!apiKey) { showToast('Configura tu API key'); return; }
+  if (!recognition) { showToast('⚠ Usa Safari en iPhone'); return; }
+  if (isSpeaking) { stopSpeaking(); return; }
+  if (isListening) {
+    recognition.stop();
+    isListening = false;
+    setOrbState('idle'); setStatus('LISTO');
+  } else {
+    try {
+      recognition.start();
+      isListening = true;
+    } catch(e) {
+      recognition.stop();
+      setTimeout(() => { recognition.start(); isListening = true; }, 300);
+    }
+  }
+}
+
+// ══════════════════════════════════════════
+//  CLAUDE API
+// ══════════════════════════════════════════
+const SYSTEM_PROMPT = `Eres NEXUS, un agente de IA avanzado para iPhone. Eres el asistente personal de Joan Carles, también eres su copiloto en su proyecto de trading llamado NEXUS.
+
+Eres conciso, inteligente, y directo. Hablas en español. Tus respuestas son cortas y claras (máx 2-3 frases para voz) a menos que te pidan más detalle.
+
+Tienes capacidades de acción. Cuando el usuario pida algo que requiera abrir una app o hacer una acción, incluye al final de tu respuesta una línea JSON especial:
+ACTION:{"type":"maps","query":"destino"} - para Google Maps
+ACTION:{"type":"call","number":"número"} - para llamar
+ACTION:{"type":"whatsapp","number":"número","message":"mensaje"} - para WhatsApp
+ACTION:{"type":"web","url":"url"} - para abrir web
+ACTION:{"type":"email","to":"email","subject":"asunto","body":"cuerpo"} - para email
+ACTION:{"type":"sms","number":"número","message":"mensaje"} - para SMS
+
+Ejemplos:
+- "Lleva a Joan Carles a la Sagrada Familia" → responde + ACTION:{"type":"maps","query":"Sagrada Familia Barcelona"}
+- "Llama a mamá" → responde + ACTION:{"type":"call","number":"mamá"}
+- "Manda whatsapp a Pedro que llego tarde" → ACTION:{"type":"whatsapp","number":"Pedro","message":"Llego tarde"}
+
+Para consultas de NEXUS trading, responde con análisis y consejos basados en tu conocimiento de la plataforma.
+Para el tiempo, responde con lo que sabes y sugiere abrir Weather.
+Para recordatorios, confirma y sugiere añadirlo.
+
+Siempre sé útil, proactivo y natural.`;
+
+async function processQuery(query) {
+  setOrbState('thinking');
+  setStatus('PROCESANDO...');
+  document.getElementById('responseArea').classList.remove('visible');
+  document.getElementById('actionButtons').classList.remove('visible');
+
+  conversationHistory.push({ role: 'user', content: query });
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        system: SYSTEM_PROMPT,
+        messages: conversationHistory.slice(-10)
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || 'API error ' + res.status);
+    }
+
+    const data = await res.json();
+    const fullText = data.content[0].text;
+
+    // Parse action
+    const actionMatch = fullText.match(/ACTION:(\{.*\})/);
+    let action = null;
+    let displayText = fullText;
+
+    if (actionMatch) {
+      try { action = JSON.parse(actionMatch[1]); } catch(e) {}
+      displayText = fullText.replace(/ACTION:\{.*\}/, '').trim();
+    }
+
+    conversationHistory.push({ role: 'assistant', content: fullText });
+    saveHistory();
+
+    showResponse(displayText, action);
+    speak(displayText);
+
+  } catch(e) {
+    setOrbState('error');
+    setStatus('ERROR');
+    showResponse('⚠ ' + e.message, null);
+    setTimeout(() => { setOrbState('idle'); setStatus('LISTO'); }, 3000);
+  }
+}
+
+// ══════════════════════════════════════════
+//  SHOW RESPONSE + ACTIONS
+// ══════════════════════════════════════════
+function showResponse(text, action) {
+  const area = document.getElementById('responseArea');
+  area.innerHTML = '';
+  if (action) {
+    const tag = document.createElement('div');
+    tag.className = 'action-tag';
+    tag.textContent = '⚡ ' + action.type.toUpperCase();
+    area.appendChild(tag);
+    area.appendChild(document.createElement('br'));
+  }
+  const p = document.createElement('span');
+  p.textContent = text;
+  area.appendChild(p);
+  area.classList.add('visible');
+
+  if (action) showActionButtons(action);
+}
+
+function showActionButtons(action) {
+  const container = document.getElementById('actionButtons');
+  container.innerHTML = '';
+
+  let buttons = [];
+
+  if (action.type === 'maps') {
+    buttons.push({ icon: '🗺️', label: 'ABRIR MAPS', fn: () => {
+      const url = `https://maps.google.com/?q=${encodeURIComponent(action.query)}`;
+      window.open(url, '_blank');
+    }});
+  } else if (action.type === 'call') {
+    buttons.push({ icon: '📞', label: 'LLAMAR', fn: () => {
+      window.open(`tel:${action.number}`);
+    }});
+  } else if (action.type === 'whatsapp') {
+    buttons.push({ icon: '💬', label: 'WHATSAPP', fn: () => {
+      const num = action.number.replace(/\D/g,'');
+      const msg = encodeURIComponent(action.message || '');
+      const url = num
+        ? `https://wa.me/${num}?text=${msg}`
+        : `https://wa.me/?text=${msg}`;
+      window.open(url, '_blank');
+    }});
+  } else if (action.type === 'web') {
+    buttons.push({ icon: '🌐', label: 'ABRIR WEB', fn: () => window.open(action.url, '_blank') });
+  } else if (action.type === 'email') {
+    buttons.push({ icon: '📧', label: 'EMAIL', fn: () => {
+      const url = `mailto:${action.to}?subject=${encodeURIComponent(action.subject||'')}&body=${encodeURIComponent(action.body||'')}`;
+      window.open(url);
+    }});
+  } else if (action.type === 'sms') {
+    buttons.push({ icon: '💬', label: 'SMS', fn: () => {
+      window.open(`sms:${action.number}&body=${encodeURIComponent(action.message||'')}`);
+    }});
+  }
+
+  // Always add dismiss
+  buttons.push({ icon: '✓', label: 'OK', fn: () => {
+    container.classList.remove('visible');
+    container.innerHTML = '';
+  }});
+
+  buttons.forEach(b => {
+    const btn = document.createElement('button');
+    btn.className = 'action-btn';
+    btn.innerHTML = `<span class="btn-icon">${b.icon}</span>${b.label}`;
+    btn.onclick = b.fn;
+    container.appendChild(btn);
+  });
+
+  container.classList.add('visible');
+}
+
+// ══════════════════════════════════════════
+//  TTS
+// ══════════════════════════════════════════
+function speak(text) {
+  if (!synth) return;
+  synth.cancel();
+  // Strip action JSON and clean
+  const clean = text.replace(/ACTION:\{.*\}/g, '').replace(/⚡.*\n?/g,'').trim();
+  if (!clean) { setOrbState('idle'); setStatus('LISTO'); return; }
+
+  const utt = new SpeechSynthesisUtterance(clean);
+  utt.lang = 'es-ES';
+  utt.rate = 1.0;
+  utt.pitch = 1.0;
+
+  // Try to find a good Spanish voice
+  const voices = synth.getVoices();
+  const esVoice = voices.find(v => v.lang.startsWith('es') && v.localService)
+    || voices.find(v => v.lang.startsWith('es'));
+  if (esVoice) utt.voice = esVoice;
+
+  utt.onstart = () => { isSpeaking = true; setOrbState('speaking'); setStatus('HABLANDO...'); };
+  utt.onend = () => { isSpeaking = false; setOrbState('idle'); setStatus('LISTO'); };
+  utt.onerror = () => { isSpeaking = false; setOrbState('idle'); setStatus('LISTO'); };
+
+  synth.speak(utt);
+}
+
+function stopSpeaking() {
+  synth.cancel();
+  isSpeaking = false;
+  setOrbState('idle');
+  setStatus('LISTO');
+}
+
+// ══════════════════════════════════════════
+//  QUICK ACTIONS
+// ══════════════════════════════════════════
+function quickAction(type) {
+  const prompts = {
+    llamar: '¿A quién quieres llamar?',
+    whatsapp: '¿A quién quieres escribir por WhatsApp y qué mensaje?',
+    maps: '¿A dónde quieres ir?',
+    nexus: '¿Qué quieres saber de tu plataforma NEXUS de trading?',
+    tiempo: '¿El tiempo en qué ciudad quieres saber?',
+    recordatorio: '¿Qué quieres recordar y cuándo?',
+    email: '¿A quién y sobre qué quieres enviar un email?',
+    buscar: '¿Qué quieres buscar?'
+  };
+
+  document.getElementById('transcriptArea').textContent = prompts[type] || '...';
+  speak(prompts[type]);
+
+  setTimeout(() => {
+    if (recognition && !isListening) {
+      try { recognition.start(); isListening = true; } catch(e) {}
+    }
+  }, 1500);
+}
+
+// ══════════════════════════════════════════
+//  ORB STATE
+// ══════════════════════════════════════════
+const icons = { idle: '🎙️', listening: '👂', thinking: '🧠', speaking: '🔊', error: '⚠️' };
+const labels = { idle: 'TOCA PARA HABLAR', listening: 'ESCUCHANDO', thinking: 'PENSANDO', speaking: 'HABLANDO', error: 'ERROR' };
+
+function setOrbState(state) {
+  const orb = document.getElementById('mainOrb');
+  orb.className = 'orb ' + (state === 'idle' ? '' : state);
+  document.getElementById('orbIcon').textContent = icons[state] || '🎙️';
+  document.getElementById('orbLabel').textContent = labels[state] || '';
+}
+
+function setStatus(text) {
+  document.getElementById('statusText').textContent = text;
+}
+
+// ══════════════════════════════════════════
+//  HISTORY
+// ══════════════════════════════════════════
+function saveHistory() {
+  localStorage.setItem('nexus_history', JSON.stringify(conversationHistory.slice(-30)));
+}
+
+function openHistory() {
+  const panel = document.getElementById('historyPanel');
+  const list = document.getElementById('historyList');
+  list.innerHTML = '';
+
+  const pairs = [];
+  for (let i = 0; i < conversationHistory.length - 1; i += 2) {
+    if (conversationHistory[i]?.role === 'user') {
+      pairs.push({ user: conversationHistory[i].content, agent: conversationHistory[i+1]?.content || '' });
+    }
+  }
+
+  if (pairs.length === 0) {
+    list.innerHTML = '<div style="color:rgba(0,245,255,0.3);font-size:12px;text-align:center;padding:20px">Sin historial aún</div>';
+  } else {
+    pairs.slice(-15).reverse().forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      const agentText = p.agent.replace(/ACTION:\{.*\}/g, '').trim();
+      item.innerHTML = `<div class="h-user">▶ ${p.user}</div><div class="h-agent">${agentText}</div>`;
+      list.appendChild(item);
+    });
+  }
+
+  panel.classList.add('open');
+}
+
+function closeHistory() {
+  document.getElementById('historyPanel').classList.remove('open');
+}
+
+// ══════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ══════════════════════════════════════════
+//  PWA: HANDLE KEYBOARD
+// ══════════════════════════════════════════
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') toggleListen();
+});
+
+// Load voices async (iOS)
+if (speechSynthesis.onvoiceschanged !== undefined) {
+  speechSynthesis.onvoiceschanged = () => {};
+}
+</script>
+</body>
+</html>
