@@ -2,476 +2,444 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="NEXUS">
-<meta name="theme-color" content="#000000">
-<title>NEXUS Agent</title>
-
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000810">
+<title>NEXUS · J.A.R.V.I.S</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Exo+2:wght@100;200;300;400;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --cyan: #00f5ff;
-    --cyan-dim: #00b8c4;
-    --green: #00ff88;
-    --red: #ff3366;
-    --gold: #ffd700;
-    --bg: #020609;
-    --surface: #050e14;
-    --border: rgba(0,245,255,0.15);
-    --text: #c8eef5;
-    --safe-top: env(safe-area-inset-top, 44px);
-    --safe-bottom: env(safe-area-inset-bottom, 34px);
-  }
+:root {
+  --blue: #00c8ff;
+  --blue2: #0088cc;
+  --cyan: #00ffee;
+  --gold: #ffb300;
+  --red: #ff2244;
+  --green: #00ff88;
+  --dim: rgba(0,200,255,0.12);
+  --border: rgba(0,200,255,0.18);
+  --bg: #000810;
+  --panel: rgba(0,15,30,0.85);
+  --text: #cce8ff;
+  --safe-t: env(safe-area-inset-top, 44px);
+  --safe-b: env(safe-area-inset-bottom, 34px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+/* ─── CANVAS BG ─── */
+#bgCanvas{position:fixed;inset:0;z-index:0;opacity:0.5;}
 
-  html, body {
-    width: 100%; height: 100%;
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
-    overflow: hidden;
-    user-select: none;
-    -webkit-user-select: none;
-  }
+/* ─── SCANLINES ─── */
+.scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);}
 
-  /* ── BACKGROUND ── */
-  .bg-grid {
-    position: fixed; inset: 0; z-index: 0;
-    background-image:
-      linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    animation: gridShift 20s linear infinite;
-  }
-  @keyframes gridShift { to { background-position: 40px 40px; } }
+/* ─── HUD CORNERS ─── */
+.hud-corner{position:fixed;z-index:2;width:60px;height:60px;pointer-events:none;}
+.hud-corner.tl{top:calc(var(--safe-t) + 4px);left:8px;border-top:1.5px solid var(--blue);border-left:1.5px solid var(--blue);}
+.hud-corner.tr{top:calc(var(--safe-t) + 4px);right:8px;border-top:1.5px solid var(--blue);border-right:1.5px solid var(--blue);}
+.hud-corner.bl{bottom:calc(var(--safe-b) + 4px);left:8px;border-bottom:1.5px solid var(--blue);border-left:1.5px solid var(--blue);}
+.hud-corner.br{bottom:calc(var(--safe-b) + 4px);right:8px;border-bottom:1.5px solid var(--blue);border-right:1.5px solid var(--blue);}
 
-  .bg-glow {
-    position: fixed; inset: 0; z-index: 0;
-    background: radial-gradient(ellipse 60% 50% at 50% 60%, rgba(0,245,255,0.06) 0%, transparent 70%);
-    pointer-events: none;
-  }
+/* ─── MAIN LAYOUT ─── */
+#app{
+  position:relative;z-index:3;
+  display:flex;flex-direction:column;align-items:center;
+  width:100%;height:100%;
+  padding:calc(var(--safe-t) + 8px) 14px calc(var(--safe-b) + 8px);
+  gap:6px;
+}
 
-  /* ── LAYOUT ── */
-  #app {
-    position: relative; z-index: 1;
-    display: flex; flex-direction: column; align-items: center;
-    width: 100%; height: 100%;
-    padding-top: calc(var(--safe-top) + 12px);
-    padding-bottom: calc(var(--safe-bottom) + 12px);
-    padding-left: 16px; padding-right: 16px;
-  }
+/* ─── HEADER ─── */
+.header{
+  width:100%;display:flex;align-items:center;justify-content:space-between;
+  padding:0 4px;
+}
+.logo-block{display:flex;flex-direction:column;}
+.logo{font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;letter-spacing:8px;
+  color:var(--blue);text-shadow:0 0 20px rgba(0,200,255,0.9),0 0 60px rgba(0,200,255,0.4);
+  line-height:1;}
+.logo-sub{font-size:8px;letter-spacing:5px;color:rgba(0,200,255,0.45);margin-top:1px;}
+.header-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
+.sys-status{font-size:9px;letter-spacing:2px;color:rgba(0,200,255,0.5);}
+.sys-online{color:var(--green);text-shadow:0 0 8px var(--green);}
+.time-display{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;
+  color:var(--blue);letter-spacing:2px;}
 
-  /* ── HEADER ── */
-  .header {
-    width: 100%; display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 8px;
-  }
-  .logo {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 22px; font-weight: 900;
-    letter-spacing: 6px;
-    color: var(--cyan);
-    text-shadow: 0 0 20px rgba(0,245,255,0.8), 0 0 40px rgba(0,245,255,0.4);
-  }
-  .status-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--green);
-    box-shadow: 0 0 8px var(--green);
-    animation: pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+/* ─── ARC REACTOR ─── */
+.arc-container{
+  position:relative;flex-shrink:0;
+  width:190px;height:190px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+}
+.arc-ring{position:absolute;border-radius:50%;border:1px solid transparent;}
+.ar1{width:190px;height:190px;border-color:rgba(0,200,255,0.12);animation:spin 20s linear infinite;}
+.ar2{width:166px;height:166px;border-color:rgba(0,200,255,0.18);animation:spin 14s linear infinite reverse;}
+.ar3{width:144px;height:144px;border-style:dashed;border-color:rgba(0,200,255,0.1);animation:spin 8s linear infinite;}
+.ar4{width:124px;height:124px;border-color:rgba(0,200,255,0.25);animation:spin 5s linear infinite reverse;}
 
-  /* ── ORB ── */
-  .orb-container {
-    flex: 1;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 0;
-  }
+/* tick marks on ar1 */
+.ar1::before,.ar1::after{content:'';position:absolute;background:var(--blue);box-shadow:0 0 6px var(--blue);}
+.ar1::before{width:6px;height:1.5px;top:50%;left:-3px;transform:translateY(-50%);}
+.ar1::after{width:1.5px;height:6px;top:-3px;left:50%;transform:translateX(-50%);}
 
-  .orb-wrapper {
-    position: relative;
-    width: 200px; height: 200px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-  }
+@keyframes spin{to{transform:rotate(360deg);}}
 
-  /* Rings */
-  .ring {
-    position: absolute;
-    border-radius: 50%;
-    border: 1px solid rgba(0,245,255,0.2);
-  }
-  .ring-1 { width: 200px; height: 200px; animation: ringRotate 8s linear infinite; border-color: rgba(0,245,255,0.15); }
-  .ring-2 { width: 170px; height: 170px; animation: ringRotate 5s linear infinite reverse; border-color: rgba(0,245,255,0.1); }
-  .ring-3 { width: 230px; height: 230px; animation: ringRotate 12s linear infinite; border-style: dashed; border-color: rgba(0,245,255,0.07); }
+.arc-core{
+  width:100px;height:100px;border-radius:50%;
+  background:radial-gradient(circle at 38% 32%,
+    rgba(0,220,255,0.55) 0%,
+    rgba(0,140,200,0.25) 45%,
+    rgba(0,20,60,0.95) 100%);
+  border:1.5px solid rgba(0,200,255,0.6);
+  box-shadow:
+    0 0 25px rgba(0,200,255,0.5),
+    0 0 60px rgba(0,200,255,0.2),
+    inset 0 0 30px rgba(0,200,255,0.15);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  transition:all 0.3s ease;
+  position:relative;z-index:2;
+}
+.arc-core::after{
+  content:'';position:absolute;
+  width:60px;height:60px;border-radius:50%;
+  border:1px solid rgba(0,200,255,0.3);
+  animation:corePulse 3s ease-in-out infinite;
+}
+@keyframes corePulse{0%,100%{transform:scale(0.9);opacity:0.3;}50%{transform:scale(1.15);opacity:0.7;}}
 
-  @keyframes ringRotate { to { transform: rotate(360deg); } }
+.core-icon{font-size:30px;filter:drop-shadow(0 0 8px rgba(0,200,255,1));transition:all 0.3s;}
+.core-label{font-family:'Rajdhani',sans-serif;font-size:8px;letter-spacing:3px;color:rgba(0,200,255,0.6);}
 
-  /* Main orb */
-  .orb {
-    width: 140px; height: 140px;
-    border-radius: 50%;
-    position: relative;
-    background: radial-gradient(circle at 35% 35%,
-      rgba(0,245,255,0.3) 0%,
-      rgba(0,180,200,0.15) 40%,
-      rgba(0,50,80,0.8) 100%
-    );
-    border: 1.5px solid rgba(0,245,255,0.5);
-    box-shadow:
-      0 0 30px rgba(0,245,255,0.3),
-      0 0 60px rgba(0,245,255,0.15),
-      inset 0 0 40px rgba(0,245,255,0.1);
-    transition: all 0.3s ease;
-    display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 4px;
-  }
+/* Arc states */
+.arc-core.listening{
+  background:radial-gradient(circle at 38% 32%,rgba(0,255,238,0.6) 0%,rgba(0,200,180,0.3) 45%,rgba(0,30,50,0.95) 100%);
+  border-color:var(--cyan);
+  box-shadow:0 0 40px rgba(0,255,238,0.7),0 0 80px rgba(0,255,238,0.3),inset 0 0 40px rgba(0,255,238,0.2);
+  animation:listenPulse 0.7s ease-in-out infinite;
+}
+.arc-core.thinking{
+  background:radial-gradient(circle at 38% 32%,rgba(255,179,0,0.5) 0%,rgba(200,120,0,0.25) 45%,rgba(40,20,0,0.95) 100%);
+  border-color:var(--gold);
+  box-shadow:0 0 40px rgba(255,179,0,0.5),0 0 80px rgba(255,179,0,0.2);
+  animation:thinkSpin 1s linear infinite;
+}
+.arc-core.speaking{
+  background:radial-gradient(circle at 38% 32%,rgba(0,255,136,0.5) 0%,rgba(0,200,80,0.25) 45%,rgba(0,30,10,0.95) 100%);
+  border-color:var(--green);
+  box-shadow:0 0 40px rgba(0,255,136,0.6),0 0 80px rgba(0,255,136,0.2);
+  animation:listenPulse 0.4s ease-in-out infinite;
+}
+.arc-core.error{
+  background:radial-gradient(circle at 38% 32%,rgba(255,34,68,0.5) 0%,rgba(200,0,30,0.25) 45%,rgba(40,0,10,0.95) 100%);
+  border-color:var(--red);
+  box-shadow:0 0 40px rgba(255,34,68,0.5);
+}
+@keyframes listenPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.05);}}
+@keyframes thinkSpin{to{filter:hue-rotate(360deg);}}
 
-  .orb-icon {
-    font-size: 36px;
-    filter: drop-shadow(0 0 8px rgba(0,245,255,0.8));
-    transition: all 0.3s;
-  }
-  .orb-label {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 8px; letter-spacing: 3px;
-    color: rgba(0,245,255,0.7);
-  }
+/* Sound bars */
+.sound-bars{display:flex;gap:3px;align-items:flex-end;height:18px;opacity:0;transition:opacity 0.3s;margin-top:6px;}
+.sound-bars.active{opacity:1;}
+.sbar{width:3px;border-radius:2px;background:var(--cyan);box-shadow:0 0 4px var(--cyan);}
+.sbar:nth-child(1){animation:sba 0.7s ease-in-out infinite 0.0s;}
+.sbar:nth-child(2){animation:sba 0.7s ease-in-out infinite 0.1s;}
+.sbar:nth-child(3){animation:sba 0.7s ease-in-out infinite 0.2s;}
+.sbar:nth-child(4){animation:sba 0.7s ease-in-out infinite 0.3s;}
+.sbar:nth-child(5){animation:sba 0.7s ease-in-out infinite 0.15s;}
+.sbar:nth-child(6){animation:sba 0.7s ease-in-out infinite 0.25s;}
+@keyframes sba{0%,100%{height:3px;}50%{height:16px;}}
 
-  /* States */
-  .orb.listening {
-    background: radial-gradient(circle at 35% 35%,
-      rgba(0,245,255,0.5) 0%,
-      rgba(0,200,220,0.3) 40%,
-      rgba(0,80,100,0.9) 100%
-    );
-    box-shadow:
-      0 0 50px rgba(0,245,255,0.6),
-      0 0 100px rgba(0,245,255,0.3),
-      inset 0 0 60px rgba(0,245,255,0.2);
-    animation: orbPulse 0.8s ease-in-out infinite;
-  }
-  .orb.thinking {
-    background: radial-gradient(circle at 35% 35%,
-      rgba(255,215,0,0.4) 0%,
-      rgba(200,160,0,0.2) 40%,
-      rgba(80,50,0,0.9) 100%
-    );
-    border-color: rgba(255,215,0,0.5);
-    box-shadow: 0 0 50px rgba(255,215,0,0.4), 0 0 100px rgba(255,215,0,0.2);
-  }
-  .orb.speaking {
-    background: radial-gradient(circle at 35% 35%,
-      rgba(0,255,136,0.4) 0%,
-      rgba(0,200,100,0.2) 40%,
-      rgba(0,60,30,0.9) 100%
-    );
-    border-color: rgba(0,255,136,0.5);
-    box-shadow: 0 0 50px rgba(0,255,136,0.4), 0 0 100px rgba(0,255,136,0.2);
-    animation: orbPulse 0.4s ease-in-out infinite;
-  }
-  .orb.error {
-    background: radial-gradient(circle at 35% 35%,
-      rgba(255,51,102,0.4) 0%,
-      rgba(200,0,50,0.2) 40%,
-      rgba(80,0,20,0.9) 100%
-    );
-    border-color: rgba(255,51,102,0.5);
-    box-shadow: 0 0 50px rgba(255,51,102,0.4);
-  }
+/* ─── STATUS ─── */
+.status-line{
+  font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:4px;
+  color:rgba(0,200,255,0.55);height:18px;text-align:center;transition:all 0.3s;
+}
 
-  @keyframes orbPulse {
-    0%,100% { transform: scale(1); }
-    50% { transform: scale(1.04); }
-  }
+/* ─── TRANSCRIPT ─── */
+.transcript{
+  width:100%;padding:10px 14px;min-height:40px;max-height:54px;overflow:hidden;
+  background:rgba(0,200,255,0.03);border:1px solid var(--border);border-radius:10px;
+  font-size:13px;color:rgba(200,232,255,0.6);line-height:1.4;
+  display:flex;align-items:center;
+}
+.transcript .placeholder{font-style:italic;color:rgba(0,200,255,0.25);font-size:12px;}
 
-  /* Sound bars */
-  .sound-bars {
-    display: flex; gap: 3px; align-items: flex-end; height: 20px;
-    opacity: 0; transition: opacity 0.3s;
-  }
-  .sound-bars.active { opacity: 1; }
-  .bar {
-    width: 3px; border-radius: 2px;
-    background: var(--cyan);
-    box-shadow: 0 0 4px var(--cyan);
-  }
-  .bar:nth-child(1) { animation: barAnim 0.8s ease-in-out infinite 0.0s; }
-  .bar:nth-child(2) { animation: barAnim 0.8s ease-in-out infinite 0.1s; }
-  .bar:nth-child(3) { animation: barAnim 0.8s ease-in-out infinite 0.2s; }
-  .bar:nth-child(4) { animation: barAnim 0.8s ease-in-out infinite 0.3s; }
-  .bar:nth-child(5) { animation: barAnim 0.8s ease-in-out infinite 0.4s; }
-  @keyframes barAnim {
-    0%,100% { height: 4px; }
-    50% { height: 16px; }
-  }
+/* ─── RESPONSE ─── */
+.response{
+  width:100%;padding:12px 14px;max-height:110px;overflow-y:auto;
+  background:rgba(0,200,255,0.04);
+  border:1px solid var(--border);border-left:2px solid var(--blue);border-radius:10px;
+  font-size:13px;line-height:1.6;color:var(--text);
+  display:none;
+}
+.response.show{display:block;}
+.response .atag{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(0,200,255,0.1);border:1px solid rgba(0,200,255,0.3);
+  border-radius:4px;padding:1px 7px;font-size:9px;color:var(--blue);
+  letter-spacing:1.5px;margin-bottom:6px;font-family:'Rajdhani',sans-serif;
+}
 
-  /* ── STATUS TEXT ── */
-  .status-text {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 11px; letter-spacing: 3px;
-    color: rgba(0,245,255,0.6);
-    margin-top: 16px;
-    height: 16px;
-    text-align: center;
-    transition: all 0.3s;
-  }
+/* ─── ACTION BUTTONS ─── */
+.action-row{
+  width:100%;display:flex;gap:8px;flex-wrap:wrap;display:none;
+}
+.action-row.show{display:flex;}
+.abtn{
+  flex:1;min-width:70px;padding:9px 6px;
+  border:1px solid var(--border);border-radius:10px;
+  background:rgba(0,200,255,0.05);color:var(--blue);
+  font-family:'Rajdhani',sans-serif;font-size:10px;letter-spacing:1.5px;font-weight:600;
+  cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;
+  transition:all 0.15s;
+}
+.abtn:active{background:rgba(0,200,255,0.2);transform:scale(0.96);}
+.abtn .ai{font-size:18px;}
 
-  /* ── TRANSCRIPT ── */
-  .transcript-area {
-    width: 100%;
-    max-height: 80px;
-    margin-top: 8px;
-    padding: 10px 14px;
-    background: rgba(0,245,255,0.03);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    font-size: 13px;
-    color: rgba(200,238,245,0.7);
-    line-height: 1.4;
-    overflow-y: auto;
-    min-height: 44px;
-    display: flex; align-items: center;
-  }
-  .transcript-area span { font-style: italic; color: rgba(0,245,255,0.4); font-size: 12px; }
+/* ─── QUICK GRID ─── */
+.quick-grid{
+  width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:7px;
+}
+.qbtn{
+  aspect-ratio:1;border:1px solid var(--border);border-radius:13px;
+  background:rgba(0,200,255,0.03);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  cursor:pointer;transition:all 0.15s;padding:6px 3px;
+  position:relative;overflow:hidden;
+}
+.qbtn::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 0%,rgba(0,200,255,0.08),transparent 70%);
+  opacity:0;transition:opacity 0.2s;
+}
+.qbtn:active::before{opacity:1;}
+.qbtn:active{transform:scale(0.94);border-color:rgba(0,200,255,0.4);}
+.qi{font-size:20px;}
+.ql{font-family:'Rajdhani',sans-serif;font-size:8px;letter-spacing:1px;
+  color:rgba(0,200,255,0.45);text-align:center;font-weight:600;}
 
-  /* ── RESPONSE ── */
-  .response-area {
-    width: 100%;
-    flex: 0 0 auto;
-    max-height: 140px;
-    overflow-y: auto;
-    margin-top: 8px;
-    padding: 12px 14px;
-    background: rgba(0,245,255,0.04);
-    border: 1px solid var(--border);
-    border-left: 2px solid var(--cyan);
-    border-radius: 12px;
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--text);
-    display: none;
-  }
-  .response-area.visible { display: block; }
-  .response-area .action-tag {
-    display: inline-block;
-    background: rgba(0,245,255,0.1);
-    border: 1px solid rgba(0,245,255,0.3);
-    border-radius: 4px;
-    padding: 1px 6px;
-    font-size: 10px;
-    color: var(--cyan);
-    letter-spacing: 1px;
-    margin-bottom: 4px;
-  }
+/* ─── BOTTOM ROW ─── */
+.bottom-row{
+  width:100%;display:flex;gap:7px;
+}
+.ibtn{
+  flex:1;padding:8px 4px;
+  border:1px solid var(--border);border-radius:10px;
+  background:transparent;color:rgba(0,200,255,0.4);
+  font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:1px;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;
+  transition:all 0.15s;
+}
+.ibtn:active{background:rgba(0,200,255,0.08);color:var(--blue);}
 
-  /* ── ACTION BUTTONS ── */
-  .action-buttons {
-    width: 100%; margin-top: 8px;
-    display: flex; gap: 8px; flex-wrap: wrap;
-    display: none;
-  }
-  .action-buttons.visible { display: flex; }
-  .action-btn {
-    flex: 1; min-width: 80px;
-    padding: 10px 8px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: rgba(0,245,255,0.05);
-    color: var(--cyan);
-    font-family: 'Orbitron', sans-serif;
-    font-size: 9px; letter-spacing: 1px;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.2s;
-    display: flex; flex-direction: column; align-items: center; gap: 3px;
-  }
-  .action-btn:active { background: rgba(0,245,255,0.15); transform: scale(0.96); }
-  .action-btn .btn-icon { font-size: 18px; }
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar{width:2px;}
+::-webkit-scrollbar-thumb{background:rgba(0,200,255,0.2);border-radius:2px;}
 
-  /* ── QUICK ACTIONS ── */
-  .quick-grid {
-    width: 100%; margin-top: 8px;
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
-  }
-  .quick-btn {
-    aspect-ratio: 1;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    background: rgba(0,245,255,0.03);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
-    padding: 8px 4px;
-  }
-  .quick-btn:active { background: rgba(0,245,255,0.1); transform: scale(0.95); }
-  .quick-btn .q-icon { font-size: 22px; }
-  .quick-btn .q-label {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 7px; letter-spacing: 0.5px;
-    color: rgba(0,245,255,0.5);
-    text-align: center;
-  }
+/* ─── MODAL ─── */
+.modal-bg{
+  position:fixed;inset:0;z-index:100;
+  background:rgba(0,8,16,0.96);backdrop-filter:blur(12px);
+  display:flex;align-items:center;justify-content:center;padding:24px;
+}
+.modal-bg.hidden{display:none;}
+.modal{
+  width:100%;max-width:360px;
+  background:rgba(0,15,35,0.95);
+  border:1px solid var(--border);border-radius:18px;
+  padding:28px 22px;
+  box-shadow:0 0 60px rgba(0,200,255,0.1);
+}
+.modal-logo{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;
+  letter-spacing:6px;color:var(--blue);
+  text-shadow:0 0 20px rgba(0,200,255,0.8);margin-bottom:4px;}
+.modal-title{font-size:12px;letter-spacing:3px;color:rgba(0,200,255,0.5);margin-bottom:16px;}
+.modal-desc{font-size:12px;color:rgba(200,232,255,0.5);line-height:1.6;margin-bottom:18px;}
+.modal-input{
+  width:100%;padding:12px 14px;
+  background:rgba(0,200,255,0.05);
+  border:1px solid rgba(0,200,255,0.2);border-radius:10px;
+  color:var(--text);font-family:'Exo 2',monospace;font-size:13px;outline:none;
+  margin-bottom:6px;
+}
+.modal-input:focus{border-color:var(--blue);box-shadow:0 0 15px rgba(0,200,255,0.1);}
+.modal-input::placeholder{color:rgba(0,200,255,0.2);}
+.modal-note{font-size:10px;color:rgba(200,232,255,0.3);line-height:1.5;margin-bottom:20px;}
+.modal-btn{
+  width:100%;padding:14px;
+  background:linear-gradient(135deg,rgba(0,200,255,0.2),rgba(0,130,200,0.1));
+  border:1px solid rgba(0,200,255,0.4);border-radius:12px;
+  color:var(--blue);font-family:'Rajdhani',sans-serif;
+  font-size:13px;letter-spacing:4px;font-weight:700;cursor:pointer;
+  transition:all 0.2s;
+}
+.modal-btn:active{background:rgba(0,200,255,0.3);transform:scale(0.98);}
+.modal-link{display:block;text-align:center;margin-top:12px;
+  font-size:11px;color:rgba(0,200,255,0.35);text-decoration:none;letter-spacing:1px;}
 
-  /* ── API KEY MODAL ── */
-  .modal-overlay {
-    position: fixed; inset: 0; z-index: 100;
-    background: rgba(2,6,9,0.95);
-    display: flex; align-items: center; justify-content: center;
-    padding: 24px;
-    backdrop-filter: blur(10px);
-  }
-  .modal-overlay.hidden { display: none; }
-  .modal {
-    width: 100%; max-width: 380px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 28px 24px;
-    box-shadow: 0 0 60px rgba(0,245,255,0.1);
-  }
-  .modal-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 16px; letter-spacing: 4px;
-    color: var(--cyan); margin-bottom: 6px;
-    text-shadow: 0 0 20px rgba(0,245,255,0.5);
-  }
-  .modal-sub {
-    font-size: 12px; color: rgba(200,238,245,0.5);
-    margin-bottom: 20px; line-height: 1.5;
-  }
-  .modal-input {
-    width: 100%; padding: 12px 14px;
-    background: rgba(0,245,255,0.05);
-    border: 1px solid rgba(0,245,255,0.2);
-    border-radius: 10px;
-    color: var(--text); font-family: 'Share Tech Mono', monospace;
-    font-size: 13px; outline: none;
-    margin-bottom: 8px;
-  }
-  .modal-input:focus { border-color: var(--cyan); box-shadow: 0 0 15px rgba(0,245,255,0.1); }
-  .modal-input::placeholder { color: rgba(0,245,255,0.25); }
-  .modal-note {
-    font-size: 10px; color: rgba(200,238,245,0.35);
-    margin-bottom: 20px; line-height: 1.5;
-  }
-  .modal-btn {
-    width: 100%; padding: 14px;
-    background: linear-gradient(135deg, rgba(0,245,255,0.2), rgba(0,180,200,0.1));
-    border: 1px solid rgba(0,245,255,0.4);
-    border-radius: 12px;
-    color: var(--cyan);
-    font-family: 'Orbitron', sans-serif;
-    font-size: 12px; letter-spacing: 3px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .modal-btn:active { transform: scale(0.98); background: rgba(0,245,255,0.3); }
-  .modal-link {
-    display: block; text-align: center; margin-top: 12px;
-    font-size: 11px; color: rgba(0,245,255,0.4);
-    text-decoration: none;
-  }
+/* ─── HISTORY PANEL ─── */
+.history-panel{
+  position:fixed;inset:0;z-index:50;
+  background:rgba(0,8,16,0.97);
+  display:flex;flex-direction:column;
+  padding:calc(var(--safe-t) + 20px) 18px calc(var(--safe-b) + 16px);
+  transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.history-panel.open{transform:translateX(0);}
+.history-head{font-family:'Rajdhani',sans-serif;font-size:16px;letter-spacing:5px;
+  color:var(--blue);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+.history-close{background:transparent;border:1px solid var(--border);border-radius:8px;
+  padding:6px 12px;color:rgba(0,200,255,0.5);font-family:'Rajdhani',sans-serif;
+  font-size:10px;letter-spacing:2px;cursor:pointer;}
+.history-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;}
+.hitem{padding:11px 13px;border:1px solid var(--border);border-radius:10px;
+  background:rgba(0,200,255,0.02);}
+.hitem .hu{font-size:11px;color:rgba(0,200,255,0.55);margin-bottom:3px;letter-spacing:1px;}
+.hitem .ha{font-size:12px;color:var(--text);line-height:1.4;}
 
-  /* ── HISTORY PANEL ── */
-  .history-panel {
-    position: fixed; inset: 0; z-index: 50;
-    background: rgba(2,6,9,0.97);
-    display: flex; flex-direction: column;
-    padding: 60px 20px 40px;
-    transform: translateY(100%);
-    transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
-  }
-  .history-panel.open { transform: translateY(0); }
-  .history-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 14px; letter-spacing: 4px; color: var(--cyan);
-    margin-bottom: 16px;
-  }
-  .history-list {
-    flex: 1; overflow-y: auto;
-    display: flex; flex-direction: column; gap: 10px;
-  }
-  .history-item {
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: rgba(0,245,255,0.02);
-  }
-  .history-item .h-user { font-size: 12px; color: rgba(0,245,255,0.6); margin-bottom: 4px; }
-  .history-item .h-agent { font-size: 12px; color: var(--text); line-height: 1.4; }
-  .history-close {
-    margin-top: 16px; padding: 14px;
-    border: 1px solid var(--border); border-radius: 12px;
-    background: transparent; color: var(--text);
-    font-family: 'Orbitron', sans-serif; font-size: 11px; letter-spacing: 2px;
-    cursor: pointer;
-  }
+/* ─── SETTINGS PANEL ─── */
+.settings-panel{
+  position:fixed;inset:0;z-index:50;
+  background:rgba(0,8,16,0.97);
+  display:flex;flex-direction:column;
+  padding:calc(var(--safe-t) + 20px) 18px calc(var(--safe-b) + 16px);
+  transform:translateX(-100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.settings-panel.open{transform:translateX(0);}
+.settings-head{font-family:'Rajdhani',sans-serif;font-size:16px;letter-spacing:5px;
+  color:var(--blue);margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;}
+.setting-row{display:flex;justify-content:space-between;align-items:center;
+  padding:13px 0;border-bottom:1px solid var(--border);}
+.setting-label{font-size:13px;color:var(--text);letter-spacing:1px;}
+.setting-sub{font-size:10px;color:rgba(0,200,255,0.35);margin-top:2px;}
+.setting-action{font-family:'Rajdhani',sans-serif;font-size:10px;letter-spacing:2px;
+  color:var(--blue);background:rgba(0,200,255,0.08);border:1px solid var(--border);
+  border-radius:7px;padding:6px 12px;cursor:pointer;}
+.setting-action:active{background:rgba(0,200,255,0.2);}
 
-  /* ── SETTINGS ── */
-  .settings-row {
-    width: 100%; display: flex; justify-content: space-between;
-    margin-top: 8px; gap: 8px;
-  }
-  .icon-btn {
-    flex: 1; padding: 8px;
-    border: 1px solid var(--border); border-radius: 10px;
-    background: transparent; color: rgba(0,245,255,0.4);
-    font-size: 11px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 5px;
-    font-family: 'Orbitron', sans-serif; letter-spacing: 1px;
-    transition: all 0.2s;
-  }
-  .icon-btn:active { background: rgba(0,245,255,0.08); }
+/* ─── TOAST ─── */
+.toast{
+  position:fixed;bottom:calc(var(--safe-b) + 90px);
+  left:50%;transform:translateX(-50%) translateY(10px);
+  background:rgba(0,200,255,0.1);border:1px solid rgba(0,200,255,0.3);
+  border-radius:20px;padding:8px 22px;
+  font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:2px;color:var(--blue);
+  opacity:0;transition:all 0.3s;white-space:nowrap;pointer-events:none;z-index:200;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-  /* ── SCROLLBAR ── */
-  ::-webkit-scrollbar { width: 3px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(0,245,255,0.2); border-radius: 2px; }
+/* ─── PWA INSTALL BANNER ─── */
+.install-banner{
+  width:100%;padding:10px 14px;
+  background:rgba(255,179,0,0.07);border:1px solid rgba(255,179,0,0.25);
+  border-radius:10px;display:none;
+  align-items:center;justify-content:space-between;gap:10px;
+}
+.install-banner.show{display:flex;}
+.install-text{font-size:11px;color:rgba(255,179,0,0.7);letter-spacing:1px;line-height:1.4;}
+.install-btn{font-family:'Rajdhani',sans-serif;font-size:10px;letter-spacing:2px;
+  color:var(--gold);background:rgba(255,179,0,0.1);border:1px solid rgba(255,179,0,0.3);
+  border-radius:7px;padding:6px 10px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
 
-  /* ── TOAST ── */
-  .toast {
-    position: fixed; bottom: calc(var(--safe-bottom) + 100px);
-    left: 50%; transform: translateX(-50%) translateY(20px);
-    background: rgba(0,245,255,0.1);
-    border: 1px solid rgba(0,245,255,0.3);
-    border-radius: 20px; padding: 8px 20px;
-    font-size: 12px; color: var(--cyan);
-    opacity: 0; transition: all 0.3s;
-    white-space: nowrap; pointer-events: none; z-index: 200;
-    font-family: 'Orbitron', sans-serif; letter-spacing: 1px;
-  }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* ─── LOADING INTRO ─── */
+.intro{
+  position:fixed;inset:0;z-index:500;
+  background:var(--bg);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;
+  transition:opacity 0.6s ease;
+}
+.intro.fade{opacity:0;pointer-events:none;}
+.intro-logo{font-family:'Rajdhani',sans-serif;font-size:42px;font-weight:700;letter-spacing:10px;
+  color:var(--blue);text-shadow:0 0 30px rgba(0,200,255,1),0 0 80px rgba(0,200,255,0.5);
+  animation:logoPulse 1s ease-in-out infinite;}
+@keyframes logoPulse{0%,100%{text-shadow:0 0 30px rgba(0,200,255,1),0 0 80px rgba(0,200,255,0.5);}
+  50%{text-shadow:0 0 50px rgba(0,200,255,1),0 0 120px rgba(0,200,255,0.8);}}
+.intro-bar{width:200px;height:1px;background:rgba(0,200,255,0.1);border-radius:1px;overflow:hidden;}
+.intro-fill{height:100%;background:var(--blue);box-shadow:0 0 10px var(--blue);
+  width:0;animation:fillBar 1.8s ease forwards;}
+@keyframes fillBar{to{width:100%;}}
+.intro-text{font-size:10px;letter-spacing:5px;color:rgba(0,200,255,0.4);}
 </style>
 </head>
 <body>
 
-<div class="bg-grid"></div>
-<div class="bg-glow"></div>
+<!-- INTRO -->
+<div class="intro" id="intro">
+  <div class="intro-logo">NEXUS</div>
+  <div class="intro-bar"><div class="intro-fill"></div></div>
+  <div class="intro-text">INICIANDO SISTEMA...</div>
+</div>
+
+<!-- BG CANVAS -->
+<canvas id="bgCanvas"></canvas>
+<div class="scanlines"></div>
+
+<!-- HUD CORNERS -->
+<div class="hud-corner tl"></div>
+<div class="hud-corner tr"></div>
+<div class="hud-corner bl"></div>
+<div class="hud-corner br"></div>
 
 <!-- API KEY MODAL -->
-<div class="modal-overlay" id="apiModal">
+<div class="modal-bg" id="apiModal">
   <div class="modal">
-    <div class="modal-title">NEXUS AGENT</div>
-    <div class="modal-sub">Conecta tu clave de Claude API para activar la inteligencia.</div>
-    <input class="modal-input" type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." autocomplete="off" autocorrect="off" spellcheck="false">
-    <div class="modal-note">🔒 Tu clave se guarda solo en este dispositivo (localStorage). No se envía a ningún servidor externo, solo a api.anthropic.com directamente.</div>
-    <button class="modal-btn" onclick="saveApiKey()">ACTIVAR NEXUS</button>
-    <a class="modal-link" href="https://console.anthropic.com" target="_blank">→ Obtener clave gratuita en console.anthropic.com</a>
+    <div class="modal-logo">NEXUS</div>
+    <div class="modal-title">SISTEMA DE AUTENTICACIÓN</div>
+    <div class="modal-desc">Introduce tu clave de API de Groq para activar el núcleo de inteligencia. Es completamente <strong style="color:var(--green)">gratuita</strong>.</div>
+    <input class="modal-input" type="password" id="apiKeyInput" placeholder="gsk_..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <div class="modal-note">🔒 La clave se almacena únicamente en este dispositivo y se envía directamente a api.groq.com. Nadie más tiene acceso.</div>
+    <button class="modal-btn" onclick="saveApiKey()">⚡ ACTIVAR SISTEMA</button>
+    <a class="modal-link" href="https://console.groq.com/keys" target="_blank">→ Obtener clave GRATIS en console.groq.com</a>
   </div>
 </div>
 
 <!-- HISTORY PANEL -->
 <div class="history-panel" id="historyPanel">
-  <div class="history-title">HISTORIAL</div>
+  <div class="history-head">
+    <span>HISTORIAL</span>
+    <button class="history-close" onclick="closeHistory()">✕ CERRAR</button>
+  </div>
   <div class="history-list" id="historyList"></div>
-  <button class="history-close" onclick="closeHistory()">✕ CERRAR</button>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-head">
+    <span>CONFIGURACIÓN</span>
+    <button class="history-close" onclick="closeSettings()">✕ CERRAR</button>
+  </div>
+  <div class="setting-row">
+    <div><div class="setting-label">API Key</div><div class="setting-sub">Cambiar clave de Groq</div></div>
+    <button class="setting-action" onclick="clearKey()">CAMBIAR</button>
+  </div>
+  <div class="setting-row">
+    <div><div class="setting-label">Voz</div><div class="setting-sub" id="voiceNameDisplay">Detectando...</div></div>
+    <button class="setting-action" onclick="cycleVoice()">CAMBIAR</button>
+  </div>
+  <div class="setting-row">
+    <div><div class="setting-label">Velocidad de voz</div><div class="setting-sub" id="rateDisplay">Normal (1.0x)</div></div>
+    <button class="setting-action" onclick="cycleRate()">CAMBIAR</button>
+  </div>
+  <div class="setting-row">
+    <div><div class="setting-label">Idioma</div><div class="setting-sub">Español (España)</div></div>
+    <button class="setting-action" onclick="cycleLang()">CAMBIAR</button>
+  </div>
+  <div class="setting-row">
+    <div><div class="setting-label">Borrar historial</div><div class="setting-sub">Elimina todas las conversaciones</div></div>
+    <button class="setting-action" onclick="clearHistory()">BORRAR</button>
+  </div>
+  <div class="setting-row">
+    <div><div class="setting-label">Instalar como app</div><div class="setting-sub">Safari → Compartir → Añadir a inicio</div></div>
+    <button class="setting-action" onclick="showInstallGuide()">CÓMO</button>
+  </div>
+  <div style="margin-top:auto;padding-top:20px;font-size:10px;color:rgba(0,200,255,0.2);letter-spacing:2px;text-align:center;">
+    NEXUS v2.0 · JARVIS INTERFACE · GROQ AI
+  </div>
 </div>
 
 <!-- MAIN APP -->
@@ -479,87 +447,69 @@
 
   <!-- Header -->
   <div class="header">
-    <div class="logo">NEXUS</div>
-    <div style="display:flex;gap:10px;align-items:center">
-      <div class="status-dot" id="statusDot"></div>
+    <div class="logo-block">
+      <div class="logo">NEXUS</div>
+      <div class="logo-sub">J.A.R.V.I.S INTERFACE</div>
+    </div>
+    <div class="header-right">
+      <div class="sys-status">SISTEMA <span class="sys-online" id="sysOnline">●&nbsp;ONLINE</span></div>
+      <div class="time-display" id="timeDisplay">--:--</div>
     </div>
   </div>
 
-  <!-- ORB -->
-  <div class="orb-container">
-    <div class="orb-wrapper" onclick="toggleListen()">
-      <div class="ring ring-3"></div>
-      <div class="ring ring-1"></div>
-      <div class="ring ring-2"></div>
-      <div class="orb" id="mainOrb">
-        <div class="orb-icon" id="orbIcon">🎙️</div>
-        <div class="orb-label" id="orbLabel">TOCA PARA HABLAR</div>
-      </div>
-    </div>
-
-    <div class="sound-bars" id="soundBars">
-      <div class="bar" style="height:4px"></div>
-      <div class="bar" style="height:4px"></div>
-      <div class="bar" style="height:4px"></div>
-      <div class="bar" style="height:4px"></div>
-      <div class="bar" style="height:4px"></div>
-    </div>
-
-    <div class="status-text" id="statusText">LISTO</div>
+  <!-- PWA install banner (shows only in browser, not PWA) -->
+  <div class="install-banner" id="installBanner">
+    <div class="install-text">⚡ Instala NEXUS como app: Safari → ⬆️ → Añadir a inicio</div>
+    <button class="install-btn" onclick="dismissBanner()">OK</button>
   </div>
+
+  <!-- Arc Reactor -->
+  <div class="arc-container" onclick="toggleListen()">
+    <div class="arc-ring ar1"></div>
+    <div class="arc-ring ar2"></div>
+    <div class="arc-ring ar3"></div>
+    <div class="arc-ring ar4"></div>
+    <div class="arc-core" id="arcCore">
+      <div class="core-icon" id="coreIcon">🎙️</div>
+      <div class="core-label" id="coreLabel">HABLAR</div>
+    </div>
+  </div>
+  <div class="sound-bars" id="soundBars">
+    <div class="sbar"></div><div class="sbar"></div><div class="sbar"></div>
+    <div class="sbar"></div><div class="sbar"></div><div class="sbar"></div>
+  </div>
+
+  <!-- Status -->
+  <div class="status-line" id="statusLine">TOCA EL REACTOR PARA HABLAR</div>
 
   <!-- Transcript -->
-  <div class="transcript-area" id="transcriptArea">
-    <span>Di algo después de tocar el orbe...</span>
+  <div class="transcript" id="transcriptEl">
+    <span class="placeholder">Lo que digas aparecerá aquí...</span>
   </div>
 
   <!-- Response -->
-  <div class="response-area" id="responseArea"></div>
+  <div class="response" id="responseEl"></div>
 
-  <!-- Action buttons (dynamic) -->
-  <div class="action-buttons" id="actionButtons"></div>
+  <!-- Action buttons -->
+  <div class="action-row" id="actionRow"></div>
 
-  <!-- Quick Actions -->
+  <!-- Quick grid -->
   <div class="quick-grid">
-    <div class="quick-btn" onclick="quickAction('llamar')">
-      <div class="q-icon">📞</div>
-      <div class="q-label">LLAMAR</div>
-    </div>
-    <div class="quick-btn" onclick="quickAction('whatsapp')">
-      <div class="q-icon">💬</div>
-      <div class="q-label">WHATSAPP</div>
-    </div>
-    <div class="quick-btn" onclick="quickAction('maps')">
-      <div class="q-icon">🗺️</div>
-      <div class="q-label">MAPS</div>
-    </div>
-    <div class="quick-btn" onclick="quickAction('nexus')">
-      <div class="q-icon">📈</div>
-      <div class="q-label">NEXUS</div>
-    </div>
-    <div class="quick-btn" onclick="quickAction('tiempo')">
-      <div class="q-icon">🌤️</div>
-      <div class="q-label">TIEMPO</div>
-    </div>
-    <div class="quick-btn" onclick="quickAction('recordatorio')">
-      <div class="q-icon">⏰</div>
-      <div class="q-label">RECORDAR</div>
-    </div>
-    <div class="quick-btn" onclick="quickAction('email')">
-      <div class="q-icon">📧</div>
-      <div class="q-label">EMAIL</div>
-    </div>
-    <div class="quick-btn" onclick="quickAction('buscar')">
-      <div class="q-icon">🔍</div>
-      <div class="q-label">BUSCAR</div>
-    </div>
+    <div class="qbtn" onclick="quick('llamar')"><div class="qi">📞</div><div class="ql">LLAMAR</div></div>
+    <div class="qbtn" onclick="quick('whatsapp')"><div class="qi">💬</div><div class="ql">WHATSAPP</div></div>
+    <div class="qbtn" onclick="quick('maps')"><div class="qi">🗺️</div><div class="ql">MAPS</div></div>
+    <div class="qbtn" onclick="quick('nexus')"><div class="qi">📈</div><div class="ql">TRADING</div></div>
+    <div class="qbtn" onclick="quick('tiempo')"><div class="qi">🌤️</div><div class="ql">TIEMPO</div></div>
+    <div class="qbtn" onclick="quick('alarma')"><div class="qi">⏰</div><div class="ql">ALARMA</div></div>
+    <div class="qbtn" onclick="quick('nota')"><div class="qi">📝</div><div class="ql">NOTA</div></div>
+    <div class="qbtn" onclick="quick('buscar')"><div class="qi">🔍</div><div class="ql">BUSCAR</div></div>
   </div>
 
-  <!-- Bottom row -->
-  <div class="settings-row">
-    <button class="icon-btn" onclick="openHistory()">📋 HISTORIAL</button>
-    <button class="icon-btn" onclick="clearKey()">🔑 API KEY</button>
-    <button class="icon-btn" onclick="stopSpeaking()">🔇 SILENCIO</button>
+  <!-- Bottom controls -->
+  <div class="bottom-row">
+    <button class="ibtn" onclick="openSettings()">⚙️ CONFIG</button>
+    <button class="ibtn" onclick="openHistory()">📋 HISTORIAL</button>
+    <button class="ibtn" onclick="stopSpeaking()">🔇 SILENCIO</button>
   </div>
 
 </div>
@@ -567,102 +517,204 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ══════════════════════════════════════════
-//  STATE
-// ══════════════════════════════════════════
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
 let apiKey = '';
-let isListening = false;
 let recognition = null;
-let synth = window.speechSynthesis;
-let conversationHistory = [];
+let isListening = false;
 let isSpeaking = false;
+let history = [];
+let voices = [];
+let voiceIdx = 0;
+let speechRate = 1.0;
+let recogLang = 'es-ES';
+let currentAction = null;
 
-// ══════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════
+const RATES = [0.85, 1.0, 1.2, 1.4];
+const RATE_LABELS = ['Lento (0.85x)', 'Normal (1.0x)', 'Rápido (1.2x)', 'Muy rápido (1.4x)'];
+let rateIdx = 1;
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
 window.addEventListener('load', () => {
-  apiKey = localStorage.getItem('nexus_api_key') || '';
+  // Intro animation
+  setTimeout(() => {
+    document.getElementById('intro').classList.add('fade');
+    setTimeout(() => document.getElementById('intro').remove(), 700);
+  }, 2000);
+
+  apiKey = localStorage.getItem('nexus_groq_key') || '';
   if (apiKey) {
     document.getElementById('apiModal').classList.add('hidden');
-    initRecognition();
+    initRecog();
   }
-  // Load history
-  const saved = localStorage.getItem('nexus_history');
-  if (saved) conversationHistory = JSON.parse(saved);
+
+  const saved = localStorage.getItem('nexus_hist');
+  if (saved) try { history = JSON.parse(saved); } catch(e) {}
+
+  // Clock
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // PWA detection
+  const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  if (!isStandalone && !localStorage.getItem('nexus_banner_dismissed')) {
+    document.getElementById('installBanner').classList.add('show');
+  }
+
+  // Voices
+  if (speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = loadVoices;
+  }
+  setTimeout(loadVoices, 500);
+
+  // BG canvas
+  initCanvas();
 });
 
-// ══════════════════════════════════════════
-//  API KEY
-// ══════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  document.getElementById('timeDisplay').textContent =
+    now.getHours().toString().padStart(2,'0') + ':' +
+    now.getMinutes().toString().padStart(2,'0');
+}
+
+function loadVoices() {
+  voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('es'));
+  if (!voices.length) voices = speechSynthesis.getVoices();
+  if (voices.length) {
+    document.getElementById('voiceNameDisplay').textContent = voices[voiceIdx]?.name || 'Auto';
+  }
+}
+
+function dismissBanner() {
+  document.getElementById('installBanner').classList.remove('show');
+  localStorage.setItem('nexus_banner_dismissed', '1');
+}
+
+// ══════════════════════════════════════
+// CANVAS BACKGROUND (particle grid)
+// ══════════════════════════════════════
+function initCanvas() {
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  for (let i = 0; i < 40; i++) {
+    particles.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: Math.random() * 1.5 + 0.5
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    // Particles
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,200,255,0.4)';
+      ctx.fill();
+    });
+    // Lines between close particles
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i+1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 100) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(0,200,255,${0.08 * (1 - dist/100)})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ══════════════════════════════════════
+// API KEY
+// ══════════════════════════════════════
 function saveApiKey() {
   const val = document.getElementById('apiKeyInput').value.trim();
-  if (!val.startsWith('sk-ant')) {
+  if (!val.startsWith('gsk_') && val.length < 20) {
     showToast('⚠ Clave inválida');
     return;
   }
   apiKey = val;
-  localStorage.setItem('nexus_api_key', apiKey);
+  localStorage.setItem('nexus_groq_key', apiKey);
   document.getElementById('apiModal').classList.add('hidden');
-  initRecognition();
-  showToast('✓ NEXUS ACTIVADO');
+  initRecog();
+  showToast('✓ SISTEMA ACTIVADO');
 }
-
 function clearKey() {
-  if (!confirm('¿Cambiar API key?')) return;
-  localStorage.removeItem('nexus_api_key');
+  if (!confirm('¿Cambiar la API key?')) return;
+  localStorage.removeItem('nexus_groq_key');
   apiKey = '';
   document.getElementById('apiKeyInput').value = '';
   document.getElementById('apiModal').classList.remove('hidden');
+  closeSettings();
 }
 
-// ══════════════════════════════════════════
-//  SPEECH RECOGNITION
-// ══════════════════════════════════════════
-function initRecognition() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    showToast('⚠ Usa Safari en iPhone');
-    return;
-  }
-  recognition = new SpeechRecognition();
-  recognition.lang = 'es-ES';
+// ══════════════════════════════════════
+// SPEECH RECOGNITION
+// ══════════════════════════════════════
+function initRecog() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { showToast('⚠ Usa Safari en iPhone'); return; }
+
+  recognition = new SR();
+  recognition.lang = recogLang;
   recognition.continuous = false;
   recognition.interimResults = true;
   recognition.maxAlternatives = 1;
 
   recognition.onstart = () => {
-    setOrbState('listening');
-    setStatus('ESCUCHANDO...');
+    setArc('listening'); setStatus('ESCUCHANDO...');
     document.getElementById('soundBars').classList.add('active');
   };
-
   recognition.onresult = (e) => {
-    let interim = '';
-    let final = '';
+    let interim = '', final = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const t = e.results[i][0].transcript;
       if (e.results[i].isFinal) final += t;
       else interim += t;
     }
-    const display = final || interim;
-    document.getElementById('transcriptArea').textContent = display;
-    if (final) processQuery(final);
+    setTranscript(final || interim);
+    if (final) processQuery(final.trim());
   };
-
   recognition.onerror = (e) => {
-    setOrbState('error');
-    setStatus('ERROR: ' + e.error.toUpperCase());
+    setArc('error'); setStatus('ERROR: ' + e.error.toUpperCase());
     isListening = false;
     document.getElementById('soundBars').classList.remove('active');
-    setTimeout(() => { setOrbState('idle'); setStatus('LISTO'); }, 2000);
+    setTimeout(() => { setArc('idle'); setStatus('TOCA EL REACTOR PARA HABLAR'); }, 2500);
   };
-
   recognition.onend = () => {
     isListening = false;
     document.getElementById('soundBars').classList.remove('active');
-    if (document.getElementById('mainOrb').className.includes('listening')) {
-      setOrbState('idle');
-      setStatus('LISTO');
+    const core = document.getElementById('arcCore');
+    if (core.classList.contains('listening')) {
+      setArc('idle'); setStatus('TOCA EL REACTOR PARA HABLAR');
     }
   };
 }
@@ -672,313 +724,287 @@ function toggleListen() {
   if (!recognition) { showToast('⚠ Usa Safari en iPhone'); return; }
   if (isSpeaking) { stopSpeaking(); return; }
   if (isListening) {
-    recognition.stop();
-    isListening = false;
-    setOrbState('idle'); setStatus('LISTO');
+    recognition.stop(); isListening = false;
+    setArc('idle'); setStatus('TOCA EL REACTOR PARA HABLAR');
   } else {
-    try {
-      recognition.start();
-      isListening = true;
-    } catch(e) {
-      recognition.stop();
-      setTimeout(() => { recognition.start(); isListening = true; }, 300);
+    try { recognition.start(); isListening = true; }
+    catch(e) {
+      recognition.abort();
+      setTimeout(() => { try { recognition.start(); isListening = true; } catch(e2){} }, 400);
     }
   }
 }
 
-// ══════════════════════════════════════════
-//  CLAUDE API
-// ══════════════════════════════════════════
-const SYSTEM_PROMPT = `Eres NEXUS, un agente de IA avanzado para iPhone. Eres el asistente personal de Joan Carles, también eres su copiloto en su proyecto de trading llamado NEXUS.
+// ══════════════════════════════════════
+// GROQ API
+// ══════════════════════════════════════
+const SYSTEM = `Eres NEXUS, el asistente personal avanzado de Joan Carles — como Jarvis para Tony Stark.
+Eres inteligente, conciso, con personalidad propia. Hablas en español. Respuestas cortas y directas para voz (máximo 2-3 frases) salvo que pidan más detalle.
 
-Eres conciso, inteligente, y directo. Hablas en español. Tus respuestas son cortas y claras (máx 2-3 frases para voz) a menos que te pidan más detalle.
+Joan Carles vive en Barcelona. Tiene un proyecto de trading algorítmico llamado NEXUS (Python/Flask, paper trading, crypto y bolsa). Eres también su copiloto técnico en ese proyecto.
 
-Tienes capacidades de acción. Cuando el usuario pida algo que requiera abrir una app o hacer una acción, incluye al final de tu respuesta una línea JSON especial:
-ACTION:{"type":"maps","query":"destino"} - para Google Maps
-ACTION:{"type":"call","number":"número"} - para llamar
-ACTION:{"type":"whatsapp","number":"número","message":"mensaje"} - para WhatsApp
-ACTION:{"type":"web","url":"url"} - para abrir web
-ACTION:{"type":"email","to":"email","subject":"asunto","body":"cuerpo"} - para email
-ACTION:{"type":"sms","number":"número","message":"mensaje"} - para SMS
+ACCIONES: Cuando el usuario pida abrir una app o ejecutar algo, añade al final exactamente una línea:
+NEXUS_ACTION:{"type":"maps","query":"..."}          → Google Maps
+NEXUS_ACTION:{"type":"call","number":"..."}          → Llamada
+NEXUS_ACTION:{"type":"whatsapp","number":"...","message":"..."}  → WhatsApp
+NEXUS_ACTION:{"type":"web","url":"..."}              → Abrir web
+NEXUS_ACTION:{"type":"email","to":"...","subject":"...","body":"..."} → Email
+NEXUS_ACTION:{"type":"sms","number":"...","message":"..."} → SMS
+NEXUS_ACTION:{"type":"search","query":"..."}         → Búsqueda web
 
 Ejemplos:
-- "Lleva a Joan Carles a la Sagrada Familia" → responde + ACTION:{"type":"maps","query":"Sagrada Familia Barcelona"}
-- "Llama a mamá" → responde + ACTION:{"type":"call","number":"mamá"}
-- "Manda whatsapp a Pedro que llego tarde" → ACTION:{"type":"whatsapp","number":"Pedro","message":"Llego tarde"}
+"Llévame a la Sagrada Familia" → texto + NEXUS_ACTION:{"type":"maps","query":"Sagrada Familia Barcelona"}
+"Busca noticias de Bitcoin" → texto + NEXUS_ACTION:{"type":"search","query":"Bitcoin noticias hoy"}
+"Llama a mamá" → texto + NEXUS_ACTION:{"type":"call","number":"mamá"}
 
-Para consultas de NEXUS trading, responde con análisis y consejos basados en tu conocimiento de la plataforma.
-Para el tiempo, responde con lo que sabes y sugiere abrir Weather.
-Para recordatorios, confirma y sugiere añadirlo.
-
-Siempre sé útil, proactivo y natural.`;
+Para consultas de NEXUS trading: analiza y aconseja con expertise.
+Sé natural, inteligente y proactivo.`;
 
 async function processQuery(query) {
-  setOrbState('thinking');
-  setStatus('PROCESANDO...');
-  document.getElementById('responseArea').classList.remove('visible');
-  document.getElementById('actionButtons').classList.remove('visible');
+  setArc('thinking'); setStatus('PROCESANDO...');
+  hideResponse(); hideActions();
 
-  conversationHistory.push({ role: 'user', content: query });
+  history.push({ role:'user', content: query });
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+        'Authorization': 'Bearer ' + apiKey
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 500,
-        system: SYSTEM_PROMPT,
-        messages: conversationHistory.slice(-10)
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 400,
+        temperature: 0.7,
+        messages: [
+          { role: 'system', content: SYSTEM },
+          ...history.slice(-12)
+        ]
       })
     });
 
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error?.message || 'API error ' + res.status);
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'Error ' + res.status);
     }
 
     const data = await res.json();
-    const fullText = data.content[0].text;
+    const full = data.choices[0].message.content;
 
     // Parse action
-    const actionMatch = fullText.match(/ACTION:(\{.*\})/);
+    const m = full.match(/NEXUS_ACTION:(\{[^\n]+\})/);
     let action = null;
-    let displayText = fullText;
+    let display = full.replace(/NEXUS_ACTION:\{[^\n]+\}/g,'').trim();
+    if (m) { try { action = JSON.parse(m[1]); } catch(e){} }
 
-    if (actionMatch) {
-      try { action = JSON.parse(actionMatch[1]); } catch(e) {}
-      displayText = fullText.replace(/ACTION:\{.*\}/, '').trim();
-    }
-
-    conversationHistory.push({ role: 'assistant', content: fullText });
+    history.push({ role:'assistant', content: full });
     saveHistory();
 
-    showResponse(displayText, action);
-    speak(displayText);
+    showResponse(display, action);
+    speak(display);
 
   } catch(e) {
-    setOrbState('error');
-    setStatus('ERROR');
+    setArc('error'); setStatus('ERROR DE CONEXIÓN');
     showResponse('⚠ ' + e.message, null);
-    setTimeout(() => { setOrbState('idle'); setStatus('LISTO'); }, 3000);
+    setTimeout(() => { setArc('idle'); setStatus('TOCA EL REACTOR PARA HABLAR'); }, 3000);
   }
 }
 
-// ══════════════════════════════════════════
-//  SHOW RESPONSE + ACTIONS
-// ══════════════════════════════════════════
+// ══════════════════════════════════════
+// RESPONSE + ACTIONS
+// ══════════════════════════════════════
 function showResponse(text, action) {
-  const area = document.getElementById('responseArea');
-  area.innerHTML = '';
+  const el = document.getElementById('responseEl');
+  el.innerHTML = '';
   if (action) {
     const tag = document.createElement('div');
-    tag.className = 'action-tag';
+    tag.className = 'atag';
     tag.textContent = '⚡ ' + action.type.toUpperCase();
-    area.appendChild(tag);
-    area.appendChild(document.createElement('br'));
+    el.appendChild(tag);
+    el.appendChild(document.createElement('br'));
   }
-  const p = document.createElement('span');
-  p.textContent = text;
-  area.appendChild(p);
-  area.classList.add('visible');
-
-  if (action) showActionButtons(action);
+  el.appendChild(document.createTextNode(text));
+  el.classList.add('show');
+  currentAction = action;
+  if (action) renderActionButtons(action);
 }
+function hideResponse() {
+  document.getElementById('responseEl').classList.remove('show');
+}
+function renderActionButtons(action) {
+  const row = document.getElementById('actionRow');
+  row.innerHTML = '';
+  const btns = [];
 
-function showActionButtons(action) {
-  const container = document.getElementById('actionButtons');
-  container.innerHTML = '';
-
-  let buttons = [];
-
-  if (action.type === 'maps') {
-    buttons.push({ icon: '🗺️', label: 'ABRIR MAPS', fn: () => {
-      const url = `https://maps.google.com/?q=${encodeURIComponent(action.query)}`;
-      window.open(url, '_blank');
-    }});
-  } else if (action.type === 'call') {
-    buttons.push({ icon: '📞', label: 'LLAMAR', fn: () => {
-      window.open(`tel:${action.number}`);
-    }});
-  } else if (action.type === 'whatsapp') {
-    buttons.push({ icon: '💬', label: 'WHATSAPP', fn: () => {
-      const num = action.number.replace(/\D/g,'');
-      const msg = encodeURIComponent(action.message || '');
-      const url = num
-        ? `https://wa.me/${num}?text=${msg}`
-        : `https://wa.me/?text=${msg}`;
-      window.open(url, '_blank');
-    }});
-  } else if (action.type === 'web') {
-    buttons.push({ icon: '🌐', label: 'ABRIR WEB', fn: () => window.open(action.url, '_blank') });
-  } else if (action.type === 'email') {
-    buttons.push({ icon: '📧', label: 'EMAIL', fn: () => {
-      const url = `mailto:${action.to}?subject=${encodeURIComponent(action.subject||'')}&body=${encodeURIComponent(action.body||'')}`;
-      window.open(url);
-    }});
-  } else if (action.type === 'sms') {
-    buttons.push({ icon: '💬', label: 'SMS', fn: () => {
-      window.open(`sms:${action.number}&body=${encodeURIComponent(action.message||'')}`);
-    }});
-  }
-
-  // Always add dismiss
-  buttons.push({ icon: '✓', label: 'OK', fn: () => {
-    container.classList.remove('visible');
-    container.innerHTML = '';
+  if (action.type === 'maps') btns.push({ icon:'🗺️', label:'ABRIR MAPS', fn:() => window.open(`https://maps.google.com/?q=${encodeURIComponent(action.query)}`,'_blank') });
+  else if (action.type === 'call') btns.push({ icon:'📞', label:'LLAMAR', fn:() => window.open(`tel:${action.number}`) });
+  else if (action.type === 'whatsapp') btns.push({ icon:'💬', label:'WHATSAPP', fn:() => {
+    const n = action.number.replace(/\D/g,'');
+    const url = n ? `https://wa.me/${n}?text=${encodeURIComponent(action.message||'')}` : `https://wa.me/?text=${encodeURIComponent(action.message||'')}`;
+    window.open(url,'_blank');
   }});
+  else if (action.type === 'web') btns.push({ icon:'🌐', label:'ABRIR', fn:() => window.open(action.url,'_blank') });
+  else if (action.type === 'email') btns.push({ icon:'📧', label:'EMAIL', fn:() => window.open(`mailto:${action.to}?subject=${encodeURIComponent(action.subject||'')}&body=${encodeURIComponent(action.body||'')}`) });
+  else if (action.type === 'sms') btns.push({ icon:'💬', label:'SMS', fn:() => window.open(`sms:${action.number}&body=${encodeURIComponent(action.message||'')}`) });
+  else if (action.type === 'search') btns.push({ icon:'🔍', label:'BUSCAR', fn:() => window.open(`https://www.google.com/search?q=${encodeURIComponent(action.query)}`,'_blank') });
 
-  buttons.forEach(b => {
+  btns.push({ icon:'✓', label:'OK', fn:() => { row.classList.remove('show'); row.innerHTML=''; }});
+
+  btns.forEach(b => {
     const btn = document.createElement('button');
-    btn.className = 'action-btn';
-    btn.innerHTML = `<span class="btn-icon">${b.icon}</span>${b.label}`;
+    btn.className = 'abtn';
+    btn.innerHTML = `<span class="ai">${b.icon}</span>${b.label}`;
     btn.onclick = b.fn;
-    container.appendChild(btn);
+    row.appendChild(btn);
   });
-
-  container.classList.add('visible');
+  row.classList.add('show');
+}
+function hideActions() {
+  const row = document.getElementById('actionRow');
+  row.classList.remove('show');
+  row.innerHTML = '';
 }
 
-// ══════════════════════════════════════════
-//  TTS
-// ══════════════════════════════════════════
+// ══════════════════════════════════════
+// TTS
+// ══════════════════════════════════════
 function speak(text) {
-  if (!synth) return;
-  synth.cancel();
-  // Strip action JSON and clean
-  const clean = text.replace(/ACTION:\{.*\}/g, '').replace(/⚡.*\n?/g,'').trim();
-  if (!clean) { setOrbState('idle'); setStatus('LISTO'); return; }
+  if (!speechSynthesis) return;
+  speechSynthesis.cancel();
+  const clean = text.replace(/NEXUS_ACTION:\{[^\n]+\}/g,'').replace(/[⚡⚠]/g,'').trim();
+  if (!clean) { setArc('idle'); setStatus('TOCA EL REACTOR PARA HABLAR'); return; }
 
   const utt = new SpeechSynthesisUtterance(clean);
-  utt.lang = 'es-ES';
-  utt.rate = 1.0;
-  utt.pitch = 1.0;
+  utt.lang = recogLang;
+  utt.rate = RATES[rateIdx];
+  utt.pitch = 0.95;
+  if (voices[voiceIdx]) utt.voice = voices[voiceIdx];
 
-  // Try to find a good Spanish voice
-  const voices = synth.getVoices();
-  const esVoice = voices.find(v => v.lang.startsWith('es') && v.localService)
-    || voices.find(v => v.lang.startsWith('es'));
-  if (esVoice) utt.voice = esVoice;
+  utt.onstart = () => { isSpeaking=true; setArc('speaking'); setStatus('HABLANDO...'); };
+  utt.onend = () => { isSpeaking=false; setArc('idle'); setStatus('TOCA EL REACTOR PARA HABLAR'); };
+  utt.onerror = () => { isSpeaking=false; setArc('idle'); setStatus('TOCA EL REACTOR PARA HABLAR'); };
 
-  utt.onstart = () => { isSpeaking = true; setOrbState('speaking'); setStatus('HABLANDO...'); };
-  utt.onend = () => { isSpeaking = false; setOrbState('idle'); setStatus('LISTO'); };
-  utt.onerror = () => { isSpeaking = false; setOrbState('idle'); setStatus('LISTO'); };
-
-  synth.speak(utt);
+  // iOS fix: needs user gesture context
+  speechSynthesis.speak(utt);
 }
 
 function stopSpeaking() {
-  synth.cancel();
-  isSpeaking = false;
-  setOrbState('idle');
-  setStatus('LISTO');
+  speechSynthesis.cancel();
+  isSpeaking = false; setArc('idle'); setStatus('TOCA EL REACTOR PARA HABLAR');
 }
 
-// ══════════════════════════════════════════
-//  QUICK ACTIONS
-// ══════════════════════════════════════════
-function quickAction(type) {
-  const prompts = {
-    llamar: '¿A quién quieres llamar?',
-    whatsapp: '¿A quién quieres escribir por WhatsApp y qué mensaje?',
-    maps: '¿A dónde quieres ir?',
-    nexus: '¿Qué quieres saber de tu plataforma NEXUS de trading?',
-    tiempo: '¿El tiempo en qué ciudad quieres saber?',
-    recordatorio: '¿Qué quieres recordar y cuándo?',
-    email: '¿A quién y sobre qué quieres enviar un email?',
-    buscar: '¿Qué quieres buscar?'
-  };
+// ══════════════════════════════════════
+// QUICK ACTIONS
+// ══════════════════════════════════════
+const QUICK_PROMPTS = {
+  llamar:   '¿A quién quieres llamar?',
+  whatsapp: '¿A quién y qué mensaje quieres enviar por WhatsApp?',
+  maps:     '¿A dónde quieres ir?',
+  nexus:    '¿Qué quieres saber de tu plataforma NEXUS de trading?',
+  tiempo:   '¿El tiempo en qué ciudad?',
+  alarma:   '¿A qué hora y para qué quieres la alarma?',
+  nota:     '¿Qué nota quieres guardar?',
+  buscar:   '¿Qué quieres buscar?'
+};
 
-  document.getElementById('transcriptArea').textContent = prompts[type] || '...';
-  speak(prompts[type]);
-
+function quick(type) {
+  const prompt = QUICK_PROMPTS[type];
+  setTranscript(prompt);
+  speak(prompt);
   setTimeout(() => {
-    if (recognition && !isListening) {
+    if (recognition && !isListening && apiKey) {
       try { recognition.start(); isListening = true; } catch(e) {}
     }
-  }, 1500);
+  }, 1800);
 }
 
-// ══════════════════════════════════════════
-//  ORB STATE
-// ══════════════════════════════════════════
-const icons = { idle: '🎙️', listening: '👂', thinking: '🧠', speaking: '🔊', error: '⚠️' };
-const labels = { idle: 'TOCA PARA HABLAR', listening: 'ESCUCHANDO', thinking: 'PENSANDO', speaking: 'HABLANDO', error: 'ERROR' };
+// ══════════════════════════════════════
+// ARC STATE
+// ══════════════════════════════════════
+const ARC_ICONS = { idle:'🎙️', listening:'👂', thinking:'🧠', speaking:'🔊', error:'⚠️' };
+const ARC_LABELS = { idle:'HABLAR', listening:'ESCUCHO', thinking:'PROCESO', speaking:'RESPONDO', error:'ERROR' };
 
-function setOrbState(state) {
-  const orb = document.getElementById('mainOrb');
-  orb.className = 'orb ' + (state === 'idle' ? '' : state);
-  document.getElementById('orbIcon').textContent = icons[state] || '🎙️';
-  document.getElementById('orbLabel').textContent = labels[state] || '';
+function setArc(state) {
+  const core = document.getElementById('arcCore');
+  core.className = 'arc-core' + (state !== 'idle' ? ' ' + state : '');
+  document.getElementById('coreIcon').textContent = ARC_ICONS[state] || '🎙️';
+  document.getElementById('coreLabel').textContent = ARC_LABELS[state] || '';
+}
+function setStatus(txt) { document.getElementById('statusLine').textContent = txt; }
+function setTranscript(txt) {
+  const el = document.getElementById('transcriptEl');
+  el.innerHTML = '';
+  el.textContent = txt;
 }
 
-function setStatus(text) {
-  document.getElementById('statusText').textContent = text;
+// ══════════════════════════════════════
+// HISTORY
+// ══════════════════════════════════════
+function saveHistory() { localStorage.setItem('nexus_hist', JSON.stringify(history.slice(-40))); }
+function clearHistory() {
+  if (!confirm('¿Borrar todo el historial?')) return;
+  history = []; saveHistory(); showToast('Historial borrado');
 }
-
-// ══════════════════════════════════════════
-//  HISTORY
-// ══════════════════════════════════════════
-function saveHistory() {
-  localStorage.setItem('nexus_history', JSON.stringify(conversationHistory.slice(-30)));
-}
-
 function openHistory() {
-  const panel = document.getElementById('historyPanel');
   const list = document.getElementById('historyList');
   list.innerHTML = '';
-
   const pairs = [];
-  for (let i = 0; i < conversationHistory.length - 1; i += 2) {
-    if (conversationHistory[i]?.role === 'user') {
-      pairs.push({ user: conversationHistory[i].content, agent: conversationHistory[i+1]?.content || '' });
-    }
+  for (let i = 0; i < history.length-1; i+=2) {
+    if (history[i]?.role === 'user') pairs.push({ u: history[i].content, a: history[i+1]?.content || '' });
   }
-
-  if (pairs.length === 0) {
-    list.innerHTML = '<div style="color:rgba(0,245,255,0.3);font-size:12px;text-align:center;padding:20px">Sin historial aún</div>';
+  if (!pairs.length) {
+    list.innerHTML = '<div style="color:rgba(0,200,255,0.25);font-size:12px;text-align:center;padding:30px;letter-spacing:2px;">SIN HISTORIAL</div>';
   } else {
-    pairs.slice(-15).reverse().forEach(p => {
+    pairs.slice(-20).reverse().forEach(p => {
       const item = document.createElement('div');
-      item.className = 'history-item';
-      const agentText = p.agent.replace(/ACTION:\{.*\}/g, '').trim();
-      item.innerHTML = `<div class="h-user">▶ ${p.user}</div><div class="h-agent">${agentText}</div>`;
+      item.className = 'hitem';
+      const aText = p.a.replace(/NEXUS_ACTION:\{[^\n]+\}/g,'').trim();
+      item.innerHTML = `<div class="hu">▶ ${p.u}</div><div class="ha">${aText}</div>`;
       list.appendChild(item);
     });
   }
+  document.getElementById('historyPanel').classList.add('open');
+}
+function closeHistory() { document.getElementById('historyPanel').classList.remove('open'); }
 
-  panel.classList.add('open');
+// ══════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════
+function openSettings() { document.getElementById('settingsPanel').classList.add('open'); }
+function closeSettings() { document.getElementById('settingsPanel').classList.remove('open'); }
+function cycleVoice() {
+  if (!voices.length) { showToast('Sin voces disponibles'); return; }
+  voiceIdx = (voiceIdx + 1) % voices.length;
+  document.getElementById('voiceNameDisplay').textContent = voices[voiceIdx].name;
+  speak('Sistema NEXUS operativo');
+}
+function cycleRate() {
+  rateIdx = (rateIdx + 1) % RATES.length;
+  document.getElementById('rateDisplay').textContent = RATE_LABELS[rateIdx];
+  showToast(RATE_LABELS[rateIdx]);
+}
+function cycleLang() {
+  const langs = ['es-ES','es-MX','es-AR'];
+  const labels = ['Español (España)','Español (México)','Español (Argentina)'];
+  const idx = langs.indexOf(recogLang);
+  const next = (idx + 1) % langs.length;
+  recogLang = langs[next];
+  if (recognition) recognition.lang = recogLang;
+  showToast(labels[next]);
+}
+function showInstallGuide() {
+  closeSettings();
+  alert('Para instalar NEXUS como app:\n\n1. Abre esta URL en Safari\n2. Toca el botón ⬆️ (compartir)\n3. Desplázate y toca "Añadir a pantalla de inicio"\n4. Ponle el nombre NEXUS\n5. Toca "Añadir"\n\n¡Listo! Aparecerá como una app nativa.');
 }
 
-function closeHistory() {
-  document.getElementById('historyPanel').classList.remove('open');
-}
-
-// ══════════════════════════════════════════
-//  TOAST
-// ══════════════════════════════════════════
+// ══════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
-}
-
-// ══════════════════════════════════════════
-//  PWA: HANDLE KEYBOARD
-// ══════════════════════════════════════════
-document.addEventListener('keydown', (e) => {
-  if (e.code === 'Space') toggleListen();
-});
-
-// Load voices async (iOS)
-if (speechSynthesis.onvoiceschanged !== undefined) {
-  speechSynthesis.onvoiceschanged = () => {};
 }
 </script>
 </body>
